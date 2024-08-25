@@ -1,0 +1,170 @@
+use nom::{
+    branch::alt, bytes::complete::tag, character::complete::multispace1, combinator::map,
+    multi::separated_list1, IResult, Parser,
+};
+
+use crate::{
+    parser::{parse_identifier_lower, ws},
+    types::function::{Function, FunctionBody, FunctionImplementation},
+};
+
+use super::{
+    exprs::{parse_block, parse_expr},
+    types::parse_type,
+};
+
+pub fn parse_function_signature(input: &str) -> IResult<&str, Function> {
+    let (input, name) = parse_identifier_lower(input)?;
+    let (input, _) = ws(tag(":")).parse(input)?;
+    let (input, signature) = parse_type(input)?;
+    let (input, _) = ws(tag(";")).parse(input)?;
+
+    Ok((input, Function::new(name, signature)))
+}
+
+pub fn parse_function_impl(input: &str) -> IResult<&str, FunctionImplementation> {
+    let (input, name) = parse_identifier_lower(input)?;
+    let (input, args) = parse_function_args(input)?;
+    let (input, body) = parse_function_body(input)?;
+
+    Ok((input, FunctionImplementation::new(name, args, body)))
+}
+
+/// lowercase identifiers separated by spaces
+/// Example: `arg1 arg2 arg3`
+fn parse_function_args(input: &str) -> IResult<&str, Vec<&str>> {
+    ws(separated_list1(multispace1, parse_identifier_lower)).parse(input)
+}
+
+fn parse_function_body(input: &str) -> IResult<&str, FunctionBody> {
+    alt((
+        parse_function_body_single_line,
+        parse_function_body_multi_line,
+    ))
+    .parse(input)
+}
+
+fn parse_function_body_single_line(input: &str) -> IResult<&str, FunctionBody> {
+    let (input, _) = ws(tag("=")).parse(input)?;
+    let (input, body) = ws(parse_expr).parse(input)?;
+
+    Ok((input, FunctionBody::SingleLine(body)))
+}
+
+fn parse_function_body_multi_line(input: &str) -> IResult<&str, FunctionBody> {
+    map(parse_block, FunctionBody::MultiLine).parse(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::{
+        expr::{Block, Expr, Literal, Statement},
+        Type,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_parse_simple_function() {
+        let input = "my_function: U8;";
+        let (_, function) = parse_function_signature(input).unwrap();
+
+        assert_eq!(function.name(), "my_function");
+        assert_eq!(function.signature(), &Type::U8);
+    }
+
+    #[test]
+    fn test_parse_function() {
+        let input = "my_function: U8 -> U8;";
+        let (_, function) = parse_function_signature(input).unwrap();
+
+        assert_eq!(function.name(), "my_function");
+        assert_eq!(
+            function.signature(),
+            &Type::FunctionSignature(vec![Type::U8], Box::new(Type::U8))
+        );
+    }
+
+    #[test]
+    fn test_parse_basic_function_impl() {
+        let input = "my_function _x = 1;";
+        let (_, function_impl) = parse_function_impl(input).unwrap();
+
+        assert_eq!(function_impl.name(), "my_function");
+        assert_eq!(function_impl.arguments(), &["_x"]);
+        assert_eq!(
+            function_impl.body(),
+            &FunctionBody::SingleLine(Expr::Literal(crate::types::expr::Literal::U8(1)))
+        );
+    }
+
+    #[test]
+    fn test_parse_function_impl() {
+        let input = "my_function _x _y = 1;";
+        let (_, function_impl) = parse_function_impl(input).unwrap();
+
+        assert_eq!(function_impl.name(), "my_function");
+        assert_eq!(function_impl.arguments(), &["_x", "_y"]);
+        assert_eq!(
+            function_impl.body(),
+            &FunctionBody::SingleLine(Expr::Literal(crate::types::expr::Literal::U8(1)))
+        );
+    }
+
+    #[test]
+    fn test_parse_multiline_function_impl() {
+        let input = "my_function _x _y {
+              _z = 1;
+            _z
+        }";
+        let (_, function_impl) = parse_function_impl(input).unwrap();
+
+        let expected_statements = vec![Statement::Assignment(
+            "_z".to_string(),
+            Expr::Literal(Literal::U8(1)),
+        )];
+
+        assert_eq!(function_impl.name(), "my_function");
+        assert_eq!(function_impl.arguments(), &["_x", "_y"]);
+        assert_eq!(
+            function_impl.body(),
+            &FunctionBody::MultiLine(Block::new(
+                expected_statements,
+                Expr::Identifier("_z".to_string())
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_function_args() {
+        let input = "arg1 arg2 arg3";
+        let (_, args) = parse_function_args(input).unwrap();
+
+        assert_eq!(args, vec!["arg1", "arg2", "arg3"]);
+    }
+
+    #[test]
+    fn test_parse_function_body_singleline() {
+        let input = "= 1;";
+        let (_, function_body) = parse_function_body(input).unwrap();
+
+        assert_eq!(
+            function_body,
+            FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))
+        );
+    }
+
+    #[test]
+    fn test_parse_function_body_multiline() {
+        let input = "{ _z = 1; }";
+        let (_, function_body) = parse_function_body(input).unwrap();
+
+        assert_eq!(
+            function_body,
+            FunctionBody::MultiLine(Block::new_without_return(vec![Statement::Assignment(
+                "_z".to_string(),
+                Expr::Literal(Literal::U8(1))
+            )]))
+        );
+    }
+}
