@@ -3,13 +3,12 @@ use nom::{
     multi::separated_list1, IResult, Parser,
 };
 
-use crate::{
-    parser::{parse_identifier_lower, ws},
-    types::function::{Function, FunctionBody, FunctionImplementation},
-};
+use crate::ast::functions::{Function, FunctionBody, FunctionImplementation};
 
 use super::{
-    exprs::{parse_block, parse_expr},
+    common::{parse_identifier_lower, ws},
+    expressions::parse_expr,
+    statements::parse_block,
     types::parse_type,
 };
 
@@ -57,9 +56,11 @@ fn parse_function_body_multi_line(input: &str) -> IResult<&str, FunctionBody> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{
-        expr::{Block, Expr, Literal, Statement},
-        Type,
+
+    use crate::ast::{
+        expressions::{Expr, Literal},
+        statements::{Block, Statement},
+        types::{FunctionType, PrimitiveType, Type},
     };
 
     use super::*;
@@ -70,7 +71,7 @@ mod tests {
         let (_, function) = parse_function_signature(input).unwrap();
 
         assert_eq!(function.name(), "my_function");
-        assert_eq!(function.signature(), &Type::U8);
+        assert_eq!(function.signature(), &Type::Primitive(PrimitiveType::U8));
     }
 
     #[test]
@@ -81,7 +82,10 @@ mod tests {
         assert_eq!(function.name(), "my_function");
         assert_eq!(
             function.signature(),
-            &Type::FunctionSignature(vec![Type::U8], Box::new(Type::U8))
+            &Type::Function(FunctionType::new(
+                vec![Type::Primitive(PrimitiveType::U8)],
+                Type::Primitive(PrimitiveType::U8)
+            ))
         );
     }
 
@@ -94,7 +98,7 @@ mod tests {
         assert_eq!(function_impl.arguments(), &["_x"]);
         assert_eq!(
             function_impl.body(),
-            &FunctionBody::SingleLine(Expr::Literal(crate::types::expr::Literal::U8(1)))
+            &FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))
         );
     }
 
@@ -107,7 +111,7 @@ mod tests {
         assert_eq!(function_impl.arguments(), &["_x", "_y"]);
         assert_eq!(
             function_impl.body(),
-            &FunctionBody::SingleLine(Expr::Literal(crate::types::expr::Literal::U8(1)))
+            &FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))
         );
     }
 

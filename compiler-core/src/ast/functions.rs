@@ -1,7 +1,4 @@
-use super::{
-    expr::{Block, Expr},
-    Type,
-};
+use super::{expressions::Expr, statements::Block, types::Type};
 
 pub struct Function {
     name: String,

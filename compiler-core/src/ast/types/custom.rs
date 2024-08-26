@@ -1,6 +1,6 @@
 use super::Type;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CustomType {
     name: String,
     content: CustomTypeContent,

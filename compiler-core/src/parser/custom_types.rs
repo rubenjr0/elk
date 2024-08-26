@@ -8,27 +8,20 @@ use nom::{
 };
 
 use crate::{
-    parser::{parse_identifier_lower, parse_identifier_upper, ws},
-    parsing::keywords::{parse_keyword, Keyword},
-    types::{
-        custom_type::{CustomType, CustomTypeContent, Variant},
-        Type,
+    ast::types::{
+        custom::{CustomTypeContent, Variant},
+        CustomType, Type,
     },
+    parser::common::{parse_identifier_upper, ws},
 };
 
-use super::types::parse_type;
+use super::{common::parse_identifier_lower, types::parse_type};
 
 /// Custom types are defined as follows:
 /// `type CustomType { VariantA, VariantB }`
 pub fn parse_custom_type(input: &str) -> IResult<&str, CustomType> {
-    let (remaining, Keyword::Type) = parse_keyword(input)? else {
-        return Err(nom::Err::Error(nom::error::Error {
-            input,
-            code: nom::error::ErrorKind::IsNot,
-        }));
-    };
+    let (remaining, _) = ws(tag("type")).parse(input)?;
     let (remaining, name) = ws(parse_identifier_upper).parse(remaining)?;
-    eprintln!("Parsing contents");
     let (remaining, content) =
         delimited(ws(tag("{")), parse_custom_type_contents, ws(tag("}"))).parse(remaining)?;
 
@@ -36,14 +29,16 @@ pub fn parse_custom_type(input: &str) -> IResult<&str, CustomType> {
 }
 
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
-    let (remaining, contents) = alt((
+    if let Ok((remaining, contents)) = alt((
         map(parse_variants, CustomTypeContent::Variants),
         map(parse_fields, CustomTypeContent::Fields),
-        map(tag(""), |_| CustomTypeContent::Empty),
     ))
-    .parse(input)?;
-
-    Ok((remaining, contents))
+    .parse(input)
+    {
+        Ok((remaining, contents))
+    } else {
+        Ok((input, CustomTypeContent::Empty))
+    }
 }
 
 fn parse_variants(input: &str) -> IResult<&str, Vec<Variant>> {
@@ -84,10 +79,8 @@ fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{
-        custom_type::{CustomTypeContent, Variant},
-        Type,
-    };
+    use crate::ast::types::custom::{CustomTypeContent, Variant};
+    use crate::ast::types::{PrimitiveType, Type};
 
     #[test]
     fn test_parse_empty_custom_type() {
@@ -119,8 +112,8 @@ mod tests {
         assert_eq!(
             parsed.content(),
             &CustomTypeContent::Fields(vec![
-                ("admin".to_string(), Type::Bool),
-                ("age".to_string(), Type::U8),
+                ("admin".to_string(), Type::Primitive(PrimitiveType::Bool)),
+                ("age".to_string(), Type::Primitive(PrimitiveType::U8)),
             ])
         );
     }
@@ -152,7 +145,7 @@ mod tests {
         let input = "VariantA(U8)";
         let (_, parsed) = super::parse_variant(input).unwrap();
         assert_eq!(parsed.name(), "VariantA");
-        assert_eq!(parsed.types(), &vec![super::Type::U8]);
+        assert_eq!(parsed.types(), &vec![Type::Primitive(PrimitiveType::U8)]);
     }
 
     #[test]
@@ -174,6 +167,6 @@ mod tests {
         let input = "admin: Bool";
         let (_, parsed) = super::parse_field(input).unwrap();
         assert_eq!(parsed.0, "admin");
-        assert_eq!(parsed.1, super::Type::Bool);
+        assert_eq!(parsed.1, Type::Primitive(PrimitiveType::Bool));
     }
 }
