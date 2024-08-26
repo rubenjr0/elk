@@ -5,8 +5,8 @@ type Flavor {
 
 type Person {
     name: String
-    age: U8
-    favoriteFlavor: Flavor
+    , age: U8
+    , favorite_flavor: Flavor
 }
 
 does_like : Person -> Flavor -> Bool;

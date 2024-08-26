@@ -31,15 +31,18 @@ pub fn parse_identifier_lower(input: &str) -> IResult<&str, &str> {
 
 // can begin with an uppercase letter or underscore, then it can be followed by any number of letters, numbers, or underscores
 pub fn parse_identifier_upper(input: &str) -> IResult<&str, &str> {
-    ws(recognize(pair(
-        alt((
-            verify(alpha1, |s: &str| {
-                s.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
-            }),
-            tag("_"),
+    preceded(
+        multispace0,
+        recognize(pair(
+            alt((
+                verify(alpha1, |s: &str| {
+                    s.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+                }),
+                tag("_"),
+            )),
+            many0_count(alt((alphanumeric1, tag("_")))),
         )),
-        many0_count(alt((alphanumeric1, tag("_")))),
-    )))
+    )
     .parse(input)
 }
 

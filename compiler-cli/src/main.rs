@@ -12,7 +12,7 @@ fn main() {
     let path = args.path;
     let src = std::fs::read_to_string(&path).unwrap();
     match parse_program(&src) {
-        Ok(program) => println!("{:#?}", program),
+        Ok((_, program)) => println!("{:#?}", program),
         Err(e) => println!("{}", e),
     }
 }

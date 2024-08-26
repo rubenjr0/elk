@@ -11,7 +11,7 @@ pub use primitive::PrimitiveType;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Primitive(PrimitiveType),
-    Custom(String),
+    Custom(String, Vec<String>),
     Compound(CompoundType),
     Function(FunctionType),
 }

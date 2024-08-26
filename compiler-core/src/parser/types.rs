@@ -9,13 +9,18 @@ use nom::{
 
 use crate::ast::types::{FunctionType, PrimitiveType, Type};
 
-use super::common::{parse_identifier_upper, ws};
+use super::{
+    common::{parse_identifier_upper, ws},
+    custom_types::parse_custom_type_generics,
+};
 
 pub fn parse_type(input: &str) -> IResult<&str, Type> {
     alt((
         map(parse_function_type, Type::Function),
         map(parse_primitive_type, Type::Primitive),
-        map(parse_custom_type, Type::Custom),
+        map(parse_custom_type, |(name, generics)| {
+            Type::Custom(name, generics)
+        }),
     ))
     .parse(input)
 }
@@ -35,9 +40,10 @@ fn parse_primitive_type(input: &str) -> IResult<&str, PrimitiveType> {
     .parse(input)
 }
 
-fn parse_custom_type(input: &str) -> IResult<&str, String> {
-    let (remaining, name) = parse_identifier_upper(input)?;
-    Ok((remaining, name.to_string()))
+fn parse_custom_type(input: &str) -> IResult<&str, (String, Vec<String>)> {
+    let (input, name) = parse_identifier_upper(input)?;
+    let (input, generics) = parse_custom_type_generics(input)?;
+    Ok((input, (name.to_string(), generics)))
 }
 
 /// Types separated by arrows. The last type is the return type.
@@ -64,6 +70,9 @@ fn parse_function_args(input: &str) -> IResult<&str, Vec<Type>> {
         ws(tag("->")),
         alt((
             map(parse_primitive_type, Type::Primitive),
+            map(parse_custom_type, |(name, generics)| {
+                Type::Custom(name, generics)
+            }),
             map(
                 delimited(tag("("), parse_function_type, tag(")")),
                 Type::Function,
@@ -145,7 +154,17 @@ mod tests {
     fn test_parse_type_custom() {
         let input = "CustomType";
         let (_, parsed) = parse_type(input).unwrap();
-        assert_eq!(parsed, Type::Custom("CustomType".to_string()));
+        assert_eq!(parsed, Type::Custom("CustomType".to_string(), vec![]));
+    }
+
+    #[test]
+    fn test_parse_type_custom_with_generics() {
+        let input = "Option(T)";
+        let (_, parsed) = parse_type(input).unwrap();
+        assert_eq!(
+            parsed,
+            Type::Custom("Option".to_string(), vec!["T".to_string()])
+        );
     }
 
     #[test]
@@ -163,16 +182,16 @@ mod tests {
 
     #[test]
     fn test_parse_function_signature() {
-        let input = "U8 -> U8 -> U8";
+        let input = "A -> B -> Bool";
         let (_, parsed) = parse_type(input).unwrap();
         assert_eq!(
             parsed,
             Type::Function(FunctionType::new(
                 vec![
-                    Type::Primitive(PrimitiveType::U8),
-                    Type::Primitive(PrimitiveType::U8)
+                    Type::Custom("A".to_string(), vec![]),
+                    Type::Custom("B".to_string(), vec![])
                 ],
-                Type::Primitive(PrimitiveType::U8)
+                Type::Primitive(PrimitiveType::Bool)
             ))
         );
     }

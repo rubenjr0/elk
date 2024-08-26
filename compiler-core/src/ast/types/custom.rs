@@ -4,6 +4,7 @@ use super::Type;
 pub struct CustomType {
     name: String,
     content: CustomTypeContent,
+    generics: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -22,10 +23,11 @@ pub struct Variant {
 }
 
 impl CustomType {
-    pub fn new(name: &str, content: CustomTypeContent) -> Self {
+    pub fn new(name: &str, content: CustomTypeContent, generics: Vec<String>) -> Self {
         Self {
             name: name.to_string(),
             content,
+            generics,
         }
     }
 

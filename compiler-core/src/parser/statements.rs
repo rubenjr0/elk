@@ -110,9 +110,17 @@ mod tests {
 
     #[test]
     fn test_parse_block_without_statements() {
-        let input = "{ Void }";
+        let input = "{ Unit }";
         let (_, block) = parse_block(input).unwrap();
 
         assert_eq!(block, Block::new(vec![], Expr::Unit));
+    }
+
+    #[test]
+    fn test_parse_empty_block() {
+        let input = "{}";
+        let (_, block) = parse_block(input).unwrap();
+
+        assert_eq!(block, Block::new_without_return(vec![]));
     }
 }

@@ -1,6 +1,6 @@
 use nom::{
     branch::alt, bytes::complete::tag, character::complete::multispace1, combinator::map,
-    multi::separated_list1, IResult, Parser,
+    multi::separated_list1, sequence::terminated, IResult, Parser,
 };
 
 use crate::ast::functions::{FunctionBody, FunctionDefinition, FunctionImplementation};
@@ -45,8 +45,7 @@ fn parse_function_body(input: &str) -> IResult<&str, FunctionBody> {
 
 fn parse_function_body_single_line(input: &str) -> IResult<&str, FunctionBody> {
     let (input, _) = ws(tag("=")).parse(input)?;
-    let (input, body) = ws(parse_expr).parse(input)?;
-
+    let (input, body) = terminated(ws(parse_expr), tag(";")).parse(input)?;
     Ok((input, FunctionBody::SingleLine(body)))
 }
 
@@ -66,19 +65,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_simple_function() {
+    fn test_parse_simple_function_definition() {
         let input = "my_function: U8;";
-        let (_, function) = parse_function_definition(input).unwrap();
-
+        let (remaining, function) = parse_function_definition(input).unwrap();
+        assert!(remaining.is_empty());
         assert_eq!(function.name(), "my_function");
         assert_eq!(function.signature(), &Type::Primitive(PrimitiveType::U8));
     }
 
     #[test]
-    fn test_parse_function() {
+    fn test_parse_function_definition() {
         let input = "my_function: U8 -> U8;";
-        let (_, function) = parse_function_definition(input).unwrap();
-
+        let (remaining, function) = parse_function_definition(input).unwrap();
+        assert!(remaining.is_empty());
         assert_eq!(function.name(), "my_function");
         assert_eq!(
             function.signature(),
@@ -91,22 +90,19 @@ mod tests {
 
     #[test]
     fn test_parse_basic_function_impl() {
-        let input = "my_function _x = 1;";
+        let input = "my_function _x = Unit;";
         let (_, function_impl) = parse_function_impl(input).unwrap();
 
         assert_eq!(function_impl.name(), "my_function");
         assert_eq!(function_impl.arguments(), &["_x"]);
-        assert_eq!(
-            function_impl.body(),
-            &FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))
-        );
+        assert_eq!(function_impl.body(), &FunctionBody::SingleLine(Expr::Unit));
     }
 
     #[test]
     fn test_parse_function_impl() {
         let input = "my_function _x _y = 1;";
-        let (_, function_impl) = parse_function_impl(input).unwrap();
-
+        let (remaining, function_impl) = parse_function_impl(input).unwrap();
+        assert!(remaining.is_empty());
         assert_eq!(function_impl.name(), "my_function");
         assert_eq!(function_impl.arguments(), &["_x", "_y"]);
         assert_eq!(
@@ -150,8 +146,8 @@ mod tests {
     #[test]
     fn test_parse_function_body_singleline() {
         let input = "= 1;";
-        let (_, function_body) = parse_function_body(input).unwrap();
-
+        let (remaining, function_body) = parse_function_body(input).unwrap();
+        assert!(remaining.is_empty());
         assert_eq!(
             function_body,
             FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))

@@ -32,11 +32,15 @@ fn parse_identifier(input: &str) -> IResult<&str, Expr> {
 }
 
 fn parse_unit(input: &str) -> IResult<&str, Expr> {
-    map(tag("Void"), |_| Expr::Unit).parse(input)
+    map(tag("Unit"), |_| Expr::Unit).parse(input)
 }
 
 pub fn parse_bool(input: &str) -> IResult<&str, bool> {
     alt((value(true, tag("True")), value(false, tag("False")))).parse(input)
+}
+
+fn parse_match(input: &str) -> IResult<&str, Expr> {
+    todo!()
 }
 
 #[cfg(test)]
@@ -74,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_parse_unit() {
-        let input = "Void";
+        let input = "Unit";
         let (_, expr) = parse_expr(input).unwrap();
 
         assert_eq!(expr, Expr::Unit);

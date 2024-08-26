@@ -8,6 +8,8 @@
 pub enum Expr {
     Identifier(String),
     Literal(Literal),
+    /// Fix, Model branches
+    Match(Box<Expr>, Vec<(String, Expr)>),
     Unit,
 }
 

@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    combinator::map,
+    combinator::{map, opt},
     multi::{separated_list0, separated_list1},
     sequence::delimited,
     IResult, Parser,
@@ -20,12 +20,23 @@ use super::{common::parse_identifier_lower, types::parse_type};
 /// Custom types are defined as follows:
 /// `type CustomType { VariantA, VariantB }`
 pub fn parse_custom_type(input: &str) -> IResult<&str, CustomType> {
-    let (remaining, _) = ws(tag("type")).parse(input)?;
-    let (remaining, name) = ws(parse_identifier_upper).parse(remaining)?;
-    let (remaining, content) =
-        delimited(ws(tag("{")), parse_custom_type_contents, ws(tag("}"))).parse(remaining)?;
+    let (input, _) = ws(tag("type")).parse(input)?;
+    let (input, name) = ws(parse_identifier_upper).parse(input)?;
+    let (input, generics) = parse_custom_type_generics(input)?;
+    let (input, content) =
+        delimited(ws(tag("{")), parse_custom_type_contents, ws(tag("}"))).parse(input)?;
 
-    Ok((remaining, CustomType::new(name, content)))
+    Ok((input, CustomType::new(name, content, generics)))
+}
+
+pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
+    opt(delimited(
+        ws(tag("(")),
+        separated_list1(ws(tag(",")), parse_identifier_upper.map(str::to_string)),
+        ws(tag(")")),
+    ))
+    .map(|o| o.unwrap_or(vec![]))
+    .parse(input)
 }
 
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
@@ -98,6 +109,20 @@ mod tests {
             &CustomTypeContent::Variants(vec![
                 Variant::named("VariantA"),
                 Variant::named("VariantB"),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_parse_custom_type_generics() {
+        let input = "type Option(T) { Some(T), None }";
+        let (_, parsed) = super::parse_custom_type(input).unwrap();
+        assert_eq!(parsed.name(), "Option");
+        assert_eq!(
+            parsed.content(),
+            &CustomTypeContent::Variants(vec![
+                Variant::new("Some", vec![Type::Custom("T".to_string(), vec![])]),
+                Variant::named("None"),
             ])
         );
     }
