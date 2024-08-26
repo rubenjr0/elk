@@ -2,6 +2,7 @@
 name = "elk"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
 
 [dependencies]
 elk-core = { path = "../compiler-core" }
