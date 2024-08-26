@@ -1,29 +1,29 @@
 use super::{expressions::Expr, statements::Block, types::Type};
 
-pub struct Function {
+#[derive(Debug, Clone)]
+pub struct FunctionDefinition {
     name: String,
     signature: Type,
-    implementations: Vec<FunctionImplementation>,
 }
 
+#[derive(Debug, Clone)]
 pub struct FunctionImplementation {
     name: String,
     arguments: Vec<String>,
     body: FunctionBody,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionBody {
     SingleLine(Expr),
     MultiLine(Block),
 }
 
-impl Function {
+impl FunctionDefinition {
     pub fn new(name: &str, signature: Type) -> Self {
         Self {
             name: name.to_string(),
             signature,
-            implementations: Vec::new(),
         }
     }
 

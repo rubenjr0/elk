@@ -42,13 +42,11 @@ fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
 }
 
 fn parse_variants(input: &str) -> IResult<&str, Vec<Variant>> {
-    eprintln!("Parsing custom type variants on {input:?}");
     let (remaining, variants) = separated_list1(ws(tag(",")), parse_variant).parse(input)?;
     Ok((remaining, variants))
 }
 
 fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Type)>> {
-    eprintln!("Parsing custom type fields on {input:?}");
     let (remaining, fields) = separated_list1(ws(tag(",")), parse_field).parse(input)?;
     Ok((remaining, fields))
 }

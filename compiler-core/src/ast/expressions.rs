@@ -4,14 +4,14 @@
 /// Expr is the base of the AST.
 /// Example: 1 + 2 * 3
 /// Expr: my_value
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Identifier(String),
     Literal(Literal),
     Unit,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     I8(i8),
     U8(u8),

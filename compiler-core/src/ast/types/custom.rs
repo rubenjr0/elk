@@ -1,12 +1,12 @@
 use super::Type;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CustomType {
     name: String,
     content: CustomTypeContent,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CustomTypeContent {
     Variants(Vec<Variant>),
     Fields(Vec<(String, Type)>),
@@ -15,7 +15,7 @@ pub enum CustomTypeContent {
 
 /// Named: `VariantA, VariantB`
 /// Tuple: `VariantA(U8, Bool), VariantB(I8)`
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Variant {
     name: String,
     types: Vec<Type>,

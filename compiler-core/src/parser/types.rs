@@ -20,7 +20,7 @@ pub fn parse_type(input: &str) -> IResult<&str, Type> {
     .parse(input)
 }
 
-pub fn parse_primitive_type(input: &str) -> IResult<&str, PrimitiveType> {
+fn parse_primitive_type(input: &str) -> IResult<&str, PrimitiveType> {
     alt((
         value(PrimitiveType::U8, tag("U8")),
         value(PrimitiveType::I8, tag("I8")),
@@ -35,7 +35,7 @@ pub fn parse_primitive_type(input: &str) -> IResult<&str, PrimitiveType> {
     .parse(input)
 }
 
-pub fn parse_custom_type(input: &str) -> IResult<&str, String> {
+fn parse_custom_type(input: &str) -> IResult<&str, String> {
     let (remaining, name) = parse_identifier_upper(input)?;
     Ok((remaining, name.to_string()))
 }

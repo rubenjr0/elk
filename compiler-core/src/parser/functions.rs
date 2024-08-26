@@ -3,7 +3,7 @@ use nom::{
     multi::separated_list1, IResult, Parser,
 };
 
-use crate::ast::functions::{Function, FunctionBody, FunctionImplementation};
+use crate::ast::functions::{FunctionBody, FunctionDefinition, FunctionImplementation};
 
 use super::{
     common::{parse_identifier_lower, ws},
@@ -12,13 +12,13 @@ use super::{
     types::parse_type,
 };
 
-pub fn parse_function_signature(input: &str) -> IResult<&str, Function> {
+pub fn parse_function_definition(input: &str) -> IResult<&str, FunctionDefinition> {
     let (input, name) = parse_identifier_lower(input)?;
     let (input, _) = ws(tag(":")).parse(input)?;
     let (input, signature) = parse_type(input)?;
     let (input, _) = ws(tag(";")).parse(input)?;
 
-    Ok((input, Function::new(name, signature)))
+    Ok((input, FunctionDefinition::new(name, signature)))
 }
 
 pub fn parse_function_impl(input: &str) -> IResult<&str, FunctionImplementation> {
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn test_parse_simple_function() {
         let input = "my_function: U8;";
-        let (_, function) = parse_function_signature(input).unwrap();
+        let (_, function) = parse_function_definition(input).unwrap();
 
         assert_eq!(function.name(), "my_function");
         assert_eq!(function.signature(), &Type::Primitive(PrimitiveType::U8));
@@ -77,7 +77,7 @@ mod tests {
     #[test]
     fn test_parse_function() {
         let input = "my_function: U8 -> U8;";
-        let (_, function) = parse_function_signature(input).unwrap();
+        let (_, function) = parse_function_definition(input).unwrap();
 
         assert_eq!(function.name(), "my_function");
         assert_eq!(

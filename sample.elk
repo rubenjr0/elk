@@ -1,0 +1,17 @@
+type Flavor {
+    Orange
+    , Apple
+}
+
+type Person {
+    name: String
+    age: U8
+    favoriteFlavor: Flavor
+}
+
+does_like : Person -> Flavor -> Bool;
+does_like person flavor = Unit;
+
+main {
+
+}
