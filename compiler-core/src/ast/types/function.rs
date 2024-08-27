@@ -1,12 +1,12 @@
 use super::Type;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionType {
+pub struct FunctionSignature {
     arguments: Vec<Type>,
     return_type: Box<Type>,
 }
 
-impl FunctionType {
+impl FunctionSignature {
     pub fn new(arguments: Vec<Type>, return_type: Type) -> Self {
         Self {
             arguments,

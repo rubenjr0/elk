@@ -1,9 +1,9 @@
-use super::{expressions::Expr, statements::Block, types::Type};
+use super::{expressions::Expr, statements::Block, types::FunctionSignature};
 
 #[derive(Debug, Clone)]
 pub struct FunctionDefinition {
     name: String,
-    signature: Type,
+    signature: FunctionSignature,
 }
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,7 @@ pub enum FunctionBody {
 }
 
 impl FunctionDefinition {
-    pub fn new(name: &str, signature: Type) -> Self {
+    pub fn new(name: &str, signature: FunctionSignature) -> Self {
         Self {
             name: name.to_string(),
             signature,
@@ -31,16 +31,16 @@ impl FunctionDefinition {
         &self.name
     }
 
-    pub fn signature(&self) -> &Type {
+    pub fn signature(&self) -> &FunctionSignature {
         &self.signature
     }
 }
 
 impl FunctionImplementation {
-    pub fn new(name: &str, arguments: Vec<&str>, body: FunctionBody) -> Self {
+    pub fn new(name: &str, arguments: Vec<String>, body: FunctionBody) -> Self {
         Self {
             name: name.to_string(),
-            arguments: arguments.iter().map(|a| a.to_string()).collect(),
+            arguments,
             body,
         }
     }

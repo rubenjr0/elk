@@ -13,5 +13,6 @@ does_like : Person -> Flavor -> Bool;
 does_like person flavor = Unit;
 
 main {
-
+    alice = Person { name = "Alice", age = 25, favorite_flavor = Flavor.Orange };
+    likes = does_like alice Flavor.Orange;
 }

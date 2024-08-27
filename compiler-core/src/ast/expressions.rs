@@ -8,7 +8,12 @@
 pub enum Expr {
     Identifier(String),
     Literal(Literal),
-    /// Fix, Model branches
+    NewVariant(String, String, Vec<Expr>),
+    /// Expression for creating a new instance of a type with fields.
+    /// Example: MyType { field1 =  1, field2 = 2 };
+    NewTypeInstance(String, Vec<(String, Expr)>),
+    FunctionCall(String, Vec<Expr>),
+    /// TODO: Model branches
     Match(Box<Expr>, Vec<(String, Expr)>),
     Unit,
 }

@@ -9,13 +9,13 @@ use super::{
     common::{parse_identifier_lower, ws},
     expressions::parse_expr,
     statements::parse_block,
-    types::parse_type,
+    types::parse_function_signature,
 };
 
 pub fn parse_function_definition(input: &str) -> IResult<&str, FunctionDefinition> {
     let (input, name) = parse_identifier_lower(input)?;
     let (input, _) = ws(tag(":")).parse(input)?;
-    let (input, signature) = parse_type(input)?;
+    let (input, signature) = parse_function_signature(input)?;
     let (input, _) = ws(tag(";")).parse(input)?;
 
     Ok((input, FunctionDefinition::new(name, signature)))
@@ -31,8 +31,12 @@ pub fn parse_function_impl(input: &str) -> IResult<&str, FunctionImplementation>
 
 /// lowercase identifiers separated by spaces
 /// Example: `arg1 arg2 arg3`
-fn parse_function_args(input: &str) -> IResult<&str, Vec<&str>> {
-    ws(separated_list1(multispace1, parse_identifier_lower)).parse(input)
+fn parse_function_args(input: &str) -> IResult<&str, Vec<String>> {
+    ws(separated_list1(
+        multispace1,
+        parse_identifier_lower.map(str::to_string),
+    ))
+    .parse(input)
 }
 
 fn parse_function_body(input: &str) -> IResult<&str, FunctionBody> {
@@ -59,19 +63,10 @@ mod tests {
     use crate::ast::{
         expressions::{Expr, Literal},
         statements::{Block, Statement},
-        types::{FunctionType, PrimitiveType, Type},
+        types::{FunctionSignature, PrimitiveType, Type},
     };
 
     use super::*;
-
-    #[test]
-    fn test_parse_simple_function_definition() {
-        let input = "my_function: U8;";
-        let (remaining, function) = parse_function_definition(input).unwrap();
-        assert!(remaining.is_empty());
-        assert_eq!(function.name(), "my_function");
-        assert_eq!(function.signature(), &Type::Primitive(PrimitiveType::U8));
-    }
 
     #[test]
     fn test_parse_function_definition() {
@@ -81,10 +76,10 @@ mod tests {
         assert_eq!(function.name(), "my_function");
         assert_eq!(
             function.signature(),
-            &Type::Function(FunctionType::new(
+            &FunctionSignature::new(
                 vec![Type::Primitive(PrimitiveType::U8)],
                 Type::Primitive(PrimitiveType::U8)
-            ))
+            )
         );
     }
 

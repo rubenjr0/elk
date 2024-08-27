@@ -7,7 +7,7 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::ast::types::{FunctionType, PrimitiveType, Type};
+use crate::ast::types::{FunctionSignature, PrimitiveType, Type};
 
 use super::{
     common::{parse_identifier_upper, ws},
@@ -16,7 +16,7 @@ use super::{
 
 pub fn parse_type(input: &str) -> IResult<&str, Type> {
     alt((
-        map(parse_function_type, Type::Function),
+        map(parse_function_signature, Type::Function),
         map(parse_primitive_type, Type::Primitive),
         map(parse_custom_type, |(name, generics)| {
             Type::Custom(name, generics)
@@ -50,7 +50,7 @@ fn parse_custom_type(input: &str) -> IResult<&str, (String, Vec<String>)> {
 /// If parenthesis are encountered, its a function signature, parse recursively.
 /// Example: `U8 -> U8 -> U8`
 /// Example: `(U8 -> Bool) -> U8 -> Bool`
-fn parse_function_type(input: &str) -> IResult<&str, FunctionType> {
+pub fn parse_function_signature(input: &str) -> IResult<&str, FunctionSignature> {
     let (remaining, args) = parse_function_args(input)?;
     let (return_type, args) = args.split_last().unwrap();
     if args.is_empty() {
@@ -61,7 +61,7 @@ fn parse_function_type(input: &str) -> IResult<&str, FunctionType> {
     }
     Ok((
         remaining,
-        FunctionType::new(args.to_vec(), return_type.clone()),
+        FunctionSignature::new(args.to_vec(), return_type.clone()),
     ))
 }
 
@@ -74,7 +74,7 @@ fn parse_function_args(input: &str) -> IResult<&str, Vec<Type>> {
                 Type::Custom(name, generics)
             }),
             map(
-                delimited(tag("("), parse_function_type, tag(")")),
+                delimited(tag("("), parse_function_signature, tag(")")),
                 Type::Function,
             ),
         )),
@@ -173,7 +173,7 @@ mod tests {
         let (_, parsed) = parse_type(input).unwrap();
         assert_eq!(
             parsed,
-            Type::Function(FunctionType::new(
+            Type::Function(FunctionSignature::new(
                 vec![Type::Primitive(PrimitiveType::U8)],
                 Type::Primitive(PrimitiveType::U8)
             ))
@@ -186,7 +186,7 @@ mod tests {
         let (_, parsed) = parse_type(input).unwrap();
         assert_eq!(
             parsed,
-            Type::Function(FunctionType::new(
+            Type::Function(FunctionSignature::new(
                 vec![
                     Type::Custom("A".to_string(), vec![]),
                     Type::Custom("B".to_string(), vec![])
@@ -202,9 +202,9 @@ mod tests {
         let (_, parsed) = parse_type(input).unwrap();
         assert_eq!(
             parsed,
-            Type::Function(FunctionType::new(
+            Type::Function(FunctionSignature::new(
                 vec![
-                    Type::Function(FunctionType::new(
+                    Type::Function(FunctionSignature::new(
                         vec![Type::Primitive(PrimitiveType::U8)],
                         Type::Primitive(PrimitiveType::U8)
                     )),

@@ -1,5 +1,5 @@
 use nom::character::complete::{alpha1, alphanumeric1, multispace0};
-use nom::combinator::{recognize, verify};
+use nom::combinator::{opt, recognize, verify};
 use nom::error::ParseError;
 use nom::multi::many0_count;
 use nom::sequence::{delimited, pair, preceded};
@@ -10,6 +10,12 @@ pub fn ws<'a, O, E: ParseError<&'a str>, F: Parser<&'a str, O, E>>(
     f: F,
 ) -> impl Parser<&'a str, O, E> {
     delimited(multispace0, f, multispace0)
+}
+
+pub fn opt_parenthesis<'a, O, E: ParseError<&'a str>, F: Parser<&'a str, O, E>>(
+    f: F,
+) -> impl Parser<&'a str, O, E> {
+    delimited(opt(ws(tag("("))), f, opt(ws(tag(")"))))
 }
 
 // can begin with a lowercase letter or underscore, then it can be followed by any number of letters, numbers, or underscores
