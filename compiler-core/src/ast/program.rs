@@ -35,8 +35,6 @@ impl Program {
         let mut type_definitions: Vec<CustomType> = vec![];
         let mut entry_point: Option<Block> = None;
 
-        eprintln!("Parsing from toplevels: {top_levels:#?}");
-
         for top_level in top_levels {
             match top_level {
                 TopLevel::FunctionDefinition(fd) => function_definitions.push(fd),

@@ -126,7 +126,6 @@ fn parse_field(input: &str) -> IResult<&str, (String, Expr)> {
 fn parse_function_call(input: &str) -> IResult<&str, Expr> {
     let (input, function_name) = parse_identifier_lower(input)?;
     let (input, args) = parse_function_args(input)?;
-    eprintln!("parsed {function_name} with {args:?}");
     Ok((input, Expr::FunctionCall(function_name.to_string(), args)))
 }
 
