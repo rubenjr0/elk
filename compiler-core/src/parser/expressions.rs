@@ -93,7 +93,7 @@ fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expr>> {
         separated_list1(ws(tag(",")), parse_expr),
         tag(")"),
     ))
-    .map(|o| o.unwrap_or_default())
+    .map(Option::unwrap_or_default)
     .parse(input)
 }
 
@@ -126,28 +126,29 @@ fn parse_field(input: &str) -> IResult<&str, (String, Expr)> {
 fn parse_function_call(input: &str) -> IResult<&str, Expr> {
     let (input, function_name) = parse_identifier_lower(input)?;
     let (input, args) = parse_function_args(input)?;
-
+    eprintln!("parsed {function_name} with {args:?}");
     Ok((input, Expr::FunctionCall(function_name.to_string(), args)))
 }
 
 /// Expressions separated by spaces, optionally between parentheses
+/// This is horrible, investigate a better way to do it
+///
+/// expr -> is function call?
+/// - yes: nested function calls must go between parenthesis
+/// - no: function call doesnt need to go between parenthesis
 fn parse_function_args(input: &str) -> IResult<&str, Vec<Expr>> {
-    separated_list1(
+    ws(separated_list1(
         multispace1,
-        opt_parenthesis(alt((
-            parse_new_variant,
-            parse_new_type_instance,
+        alt((
+            opt_parenthesis(parse_new_variant),
+            opt_parenthesis(parse_new_type_instance),
             parse_literal,
             parse_unit,
+            delimited(tag("("), parse_function_call, tag(")")),
             parse_identifier,
-            parse_function_call,
-        ))),
-    )
+        )),
+    ))
     .parse(input)
-}
-
-fn parse_match(input: &str) -> IResult<&str, Expr> {
-    todo!()
 }
 
 #[cfg(test)]
@@ -276,7 +277,7 @@ mod tests {
                 vec![
                     Expr::FunctionCall(
                         "other_fn".to_string(),
-                        vec![Expr::Literal(Literal::U8(32))]
+                        vec![Expr::Literal(Literal::U8(42))]
                     ),
                     Expr::NewTypeInstance(
                         "Person".to_string(),
@@ -286,6 +287,22 @@ mod tests {
                         )]
                     )
                 ]
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_function_call_complex2() {
+        let input = "my_function (other_fn 42)";
+        let (_, parsed) = parse_expr(input).unwrap();
+        assert_eq!(
+            parsed,
+            Expr::FunctionCall(
+                "my_function".to_string(),
+                vec![Expr::FunctionCall(
+                    "other_fn".to_string(),
+                    vec![Expr::Literal(Literal::U8(42))]
+                ),]
             )
         );
     }
