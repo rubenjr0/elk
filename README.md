@@ -53,7 +53,8 @@ A monad should implement the following functions:
 - `Monad.map : Monad(A) -> (A -> B) -> Monad(B)`
 - `Monad.flat_map : Monad(A) -> (A -> Monad(B)) -> Monad(B)`
 - `Monad.join : Monad(Monad(A)) -> Monad(A)`
-- `Monad.unwrap : Monad(A) -> A`.
+- `Monad.unwrap : Monad(A) -> A`
+- [ ] Anythig else?
 
 Example:
 ```
@@ -66,4 +67,4 @@ Option.join : Option(Option(A)) -> Option(A);
 Option.unwrap : Option(A) -> A;
 ```
 
-- [ ] Monad chaining syntax? like Haskell's `do` notation?
+- [ ] Monad chaining syntax? like Haskell's `do` notation? Via the `|>` operator? Or using the `chain` function?
