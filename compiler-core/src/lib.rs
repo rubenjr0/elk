@@ -1,3 +1,5 @@
+#![warn(clippy::all, clippy::nursery)]
+
 mod ast;
 mod parser;
 

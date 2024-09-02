@@ -31,7 +31,7 @@ impl FunctionDefinition {
         &self.name
     }
 
-    pub fn signature(&self) -> &FunctionSignature {
+    pub const fn signature(&self) -> &FunctionSignature {
         &self.signature
     }
 }
@@ -53,7 +53,7 @@ impl FunctionImplementation {
         &self.arguments
     }
 
-    pub fn body(&self) -> &FunctionBody {
+    pub const fn body(&self) -> &FunctionBody {
         &self.body
     }
 }

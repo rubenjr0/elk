@@ -35,7 +35,7 @@ impl CustomType {
         &self.name
     }
 
-    pub fn content(&self) -> &CustomTypeContent {
+    pub const fn content(&self) -> &CustomTypeContent {
         &self.content
     }
 }
@@ -56,7 +56,7 @@ impl Variant {
         &self.name
     }
 
-    pub fn types(&self) -> &Vec<Type> {
+    pub const fn types(&self) -> &Vec<Type> {
         &self.types
     }
 }

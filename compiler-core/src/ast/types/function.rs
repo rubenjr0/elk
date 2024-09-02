@@ -17,8 +17,4 @@ impl FunctionSignature {
     pub fn arguments(&self) -> &[Type] {
         &self.arguments
     }
-
-    pub fn return_type(&self) -> &Type {
-        &self.return_type
-    }
 }

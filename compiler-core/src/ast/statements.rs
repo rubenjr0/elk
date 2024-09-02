@@ -34,8 +34,4 @@ impl Block {
     pub fn statements(&self) -> &[Statement] {
         &self.statements
     }
-
-    pub fn return_expr(&self) -> &Expr {
-        &self.return_expr
-    }
 }
