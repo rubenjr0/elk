@@ -10,7 +10,7 @@ type Person {
 }
 
 does_like : Person -> Flavor -> Bool;
-does_like person flavor = Unit;
+does_like person flavor = True;
 
 main {
     alice = Person { name = "Alice", age = 25, favorite_flavor = Flavor.Orange };
