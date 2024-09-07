@@ -25,7 +25,7 @@ pub fn parse_identifier_lower(input: &str) -> IResult<&str, &str> {
         recognize(pair(
             alt((
                 verify(alpha1, |s: &str| {
-                    s.chars().next().map(|c| c.is_lowercase()).unwrap_or(false)
+                    s.chars().next().is_some_and(char::is_lowercase)
                 }),
                 tag("_"),
             )),
@@ -42,7 +42,7 @@ pub fn parse_identifier_upper(input: &str) -> IResult<&str, &str> {
         recognize(pair(
             alt((
                 verify(alpha1, |s: &str| {
-                    s.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+                    s.chars().next().is_some_and(char::is_uppercase)
                 }),
                 tag("_"),
             )),

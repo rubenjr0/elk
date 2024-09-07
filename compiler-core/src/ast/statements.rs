@@ -1,8 +1,8 @@
 use super::expressions::Expr;
 
 /// Statements are the building blocks of a block.
-/// Example: my_value = 1 + 2 * 3;
-/// Example: return 1 + 2 * 3;
+/// Example: `my_value = 1 + 2 * 3;`
+/// Example: `return 1 + 2 * 3;`
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Assignment(String, Expr),

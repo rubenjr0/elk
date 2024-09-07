@@ -35,7 +35,7 @@ pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
         separated_list1(ws(tag(",")), parse_identifier_upper.map(str::to_string)),
         ws(tag(")")),
     ))
-    .map(|o| o.unwrap_or_default())
+    .map(Option::unwrap_or_default)
     .parse(input)
 }
 

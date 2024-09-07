@@ -74,8 +74,8 @@ fn parse_bool(input: &str) -> IResult<&str, bool> {
 }
 
 /// Expression for creating a new instance of a type with variants
-/// Example: MyType.Variant
-/// Example: MyType.Variant(1, 2)
+/// Example: `MyType.Variant`
+/// Example: `MyType.Variant(1, 2)`
 fn parse_variant(input: &str) -> IResult<&str, Expr> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, _) = tag(".").parse(input)?;
@@ -88,7 +88,6 @@ fn parse_variant(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-/// example: "(1,2,my_id)" -> "vec![1,2,my_id]"
 fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expr>> {
     opt(delimited(
         tag("("),
@@ -99,7 +98,7 @@ fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expr>> {
     .parse(input)
 }
 
-/// Example: MyType { field1 = 1, field2 = 2 }
+/// Example: `MyType { field1 = 1, field2 = 2 }`
 fn parse_new_type_instance(input: &str) -> IResult<&str, Expr> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, fields) = parse_fields(input)?;
