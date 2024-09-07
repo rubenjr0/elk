@@ -17,14 +17,14 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(statements: Vec<Statement>, return_expr: Expr) -> Self {
+    pub const fn new(statements: Vec<Statement>, return_expr: Expr) -> Self {
         Self {
             statements,
             return_expr,
         }
     }
 
-    pub fn new_without_return(statements: Vec<Statement>) -> Self {
+    pub const fn new_without_return(statements: Vec<Statement>) -> Self {
         Self {
             statements,
             return_expr: Expr::Unit,

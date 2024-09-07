@@ -10,6 +10,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let path = args.path;
+    println!("Compiling {path}...");
     let src = std::fs::read_to_string(&path).unwrap();
     match parse_program(&src) {
         Ok((_, program)) => println!("{:#?}", program),

@@ -43,6 +43,24 @@ my_fn 42 37;
 my_fn (other_fn 42) 37;
 ```
 
+### Matching and custom types
+Should all custom types (included those in the stdlib) be fully qualified? ie: `Option.None`
+
+Should all custom types (except those in the stdlib) be fully qualified? ie: Some, `MyType.Var1`
+
+Should the qualification be omitted in scopes where we know the type? Some examples:
+
+```
+/// We know the type of `my_val` is `MyType`, so we can omit `MyType.`
+match my_val {
+  Var1 -> ...
+  Var2 -> ...
+}
+```
+
+Opinion: Maybe having everything fully qualified is better, although it's more verbose.
+
+
 ### Side effects
 *Idea:* Pure functions can't call impure functions, but impure functions can call pure functions.
 - [ ] Side effect handling? (Monads?, Something else?)

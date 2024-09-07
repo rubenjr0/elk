@@ -15,7 +15,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn new(
+    pub const fn new(
         function_definitions: Vec<FunctionDefinition>,
         function_implementations: Vec<FunctionImplementation>,
         type_definitions: Vec<CustomType>,

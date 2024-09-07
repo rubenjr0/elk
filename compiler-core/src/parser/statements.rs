@@ -1,4 +1,10 @@
-use nom::{branch::alt, bytes::complete::tag, multi::many0, sequence::delimited, IResult, Parser};
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    multi::many0,
+    sequence::{delimited, terminated},
+    IResult, Parser,
+};
 
 use crate::ast::statements::{Block, Statement};
 
@@ -26,21 +32,23 @@ fn parse_statements(input: &str) -> IResult<&str, Vec<Statement>> {
 }
 
 fn parse_statement(input: &str) -> IResult<&str, Statement> {
-    alt((parse_assign_statement, parse_return_statement)).parse(input)
+    terminated(
+        alt((parse_assign_statement, parse_return_statement)),
+        ws(tag(";")),
+    )
+    .parse(input)
 }
 
 fn parse_assign_statement(input: &str) -> IResult<&str, Statement> {
     let (input, identifier) = parse_identifier_lower(input)?;
     let (input, _) = ws(tag("=")).parse(input)?;
     let (input, expr) = parse_expr(input)?;
-    let (input, _) = ws(tag(";")).parse(input)?;
     Ok((input, Statement::Assignment(identifier.to_string(), expr)))
 }
 
 fn parse_return_statement(input: &str) -> IResult<&str, Statement> {
     let (input, _) = ws(tag("return")).parse(input)?;
     let (input, expr) = parse_expr(input)?;
-    let (input, _) = ws(tag(";")).parse(input)?;
 
     Ok((input, Statement::Return(expr)))
 }
