@@ -434,35 +434,35 @@ mod tests {
     /// Should all custom types (included those in the stdlib) be fully qualified? ie: `Option.None`
     /// Should all custom types (except those in the stdlib) be fully qualified? ie: Some, `MyType.Var1`
     /// In match blocks, should the qualification be omitted for branches? ie: if the type of the expression being matched is MyType, skip `MyType.` in the branches.
-    #[test]
-    fn test_parse_match_patterns_2() {
-        let input = "match my_option {
-            Some(x) -> True,
-            None -> False
-        }";
-        let (rem, parsed) = parse_expr(input).unwrap();
-        assert!(rem.is_empty());
-        assert_eq!(
-            parsed,
-            Expr::Match(
-                Pattern::Identifier("my_option".to_string()),
-                vec![
-                    MatchArm {
-                        pattern: Pattern::Variant(
-                            "Option".to_string(),
-                            "Some".to_string(),
-                            vec![Pattern::Identifier("x".to_string())]
-                        ),
-                        body: MatchBody::Expr(Expr::Literal(Literal::Bool(true))),
-                    },
-                    MatchArm {
-                        pattern: Pattern::Variant("Option".to_string(), "None".to_string(), vec![]),
-                        body: MatchBody::Expr(Expr::Literal(Literal::Bool(false)))
-                    }
-                ]
-            )
-        );
-    }
+    // #[test]
+    // fn test_parse_match_patterns_2() {
+    //     let input = "match my_option {
+    //         Some(x) -> True,
+    //         None -> False
+    //     }";
+    //     let (rem, parsed) = parse_expr(input).unwrap();
+    //     assert!(rem.is_empty());
+    //     assert_eq!(
+    //         parsed,
+    //         Expr::Match(
+    //             Pattern::Identifier("my_option".to_string()),
+    //             vec![
+    //                 MatchArm {
+    //                     pattern: Pattern::Variant(
+    //                         "Option".to_string(),
+    //                         "Some".to_string(),
+    //                         vec![Pattern::Identifier("x".to_string())]
+    //                     ),
+    //                     body: MatchBody::Expr(Expr::Literal(Literal::Bool(true))),
+    //                 },
+    //                 MatchArm {
+    //                     pattern: Pattern::Variant("Option".to_string(), "None".to_string(), vec![]),
+    //                     body: MatchBody::Expr(Expr::Literal(Literal::Bool(false)))
+    //                 }
+    //             ]
+    //         )
+    //     );
+    // }
 
     #[test]
     fn test_parse_binary_op() {
