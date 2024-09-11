@@ -17,6 +17,7 @@ pub enum Expr {
     FunctionCall(String, Vec<Expr>),
     Match(Pattern, Vec<MatchArm>),
     BinaryOp(Box<Expr>, BinaryOp, Box<Expr>),
+    UnaryOp(UnaryOp, Box<Expr>),
     Unit,
 }
 
@@ -45,6 +46,12 @@ pub enum BinaryOp {
     LessEq,
     Greater,
     GreaterEq,
+}
+
+/// TODO: Add more operators
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnaryOp {
+    Negate,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -8,7 +8,7 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::ast::expressions::{BinaryOp, Expr, Literal, MatchArm, MatchBody, Pattern};
+use crate::ast::expressions::{BinaryOp, Expr, Literal, MatchArm, MatchBody, Pattern, UnaryOp};
 
 use super::{
     common::{opt_parenthesis, parse_identifier_lower, parse_identifier_upper, ws},
@@ -21,10 +21,11 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
         parse_new_type_instance,
         parse_match,
         parse_binary_op,
+        parse_unary_op,
         parse_literal,
         parse_unit,
         parse_function_call,
-        parse_identifier,
+        parse_identifier_expr,
     ))
     .parse(input)
 }
@@ -40,7 +41,7 @@ fn parse_literal(input: &str) -> IResult<&str, Expr> {
     Ok((remaining, Expr::Literal(lit)))
 }
 
-fn parse_identifier(input: &str) -> IResult<&str, Expr> {
+fn parse_identifier_expr(input: &str) -> IResult<&str, Expr> {
     map(parse_identifier_lower, |id| {
         Expr::Identifier(id.to_string())
     })
@@ -149,7 +150,7 @@ fn parse_function_args(input: &str) -> IResult<&str, Vec<Expr>> {
             parse_match,
             parse_unit,
             delimited(tag("("), parse_function_call, tag(")")),
-            parse_identifier,
+            parse_identifier_expr,
         )),
     ))
     .parse(input)
@@ -191,7 +192,7 @@ fn parse_match_body(input: &str) -> IResult<&str, MatchBody> {
 fn parse_binary_op(input: &str) -> IResult<&str, Expr> {
     let (input, left) = alt((
         parse_literal,
-        parse_identifier,
+        parse_identifier_expr,
         delimited(tag("("), parse_function_call, tag(")")),
         delimited(tag("("), parse_binary_op, tag(")")),
     ))
@@ -219,6 +220,18 @@ fn parse_binary_operator(input: &str) -> IResult<&str, BinaryOp> {
         value(BinaryOp::LessEq, tag("<=")),
     ))
     .parse(input)
+}
+
+fn parse_unary_op(input: &str) -> IResult<&str, Expr> {
+    let (input, op) = parse_unary_operator(input)?;
+    let (input, operand) = alt((parse_literal, parse_identifier_expr)).parse(input)?;
+
+    Ok((input, Expr::UnaryOp(op, Box::new(operand))))
+}
+
+/// TODO: Add more operators (?)
+fn parse_unary_operator(input: &str) -> IResult<&str, UnaryOp> {
+    value(UnaryOp::Negate, tag("¬")).parse(input)
 }
 
 #[cfg(test)]
@@ -485,6 +498,20 @@ mod tests {
                 Box::new(Expr::Literal(Literal::U8(1))),
                 BinaryOp::Add,
                 Box::new(Expr::Literal(Literal::U8(2)))
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_unary_op() {
+        let input = "¬True";
+        let (rem, parsed) = parse_expr(input).unwrap();
+        assert!(rem.is_empty());
+        assert_eq!(
+            parsed,
+            Expr::UnaryOp(
+                UnaryOp::Negate,
+                Box::new(Expr::Literal(Literal::Bool(true)))
             )
         );
     }
