@@ -4,6 +4,7 @@ WIP, not ready for use yet
 Inspired by Gleam, Rust, Elm, Haskell and Scala.
 
 ## TODO
+- Better comment handling
 - Expressions evaluate to a type
 - Type-bound functions
 - Pattern matching

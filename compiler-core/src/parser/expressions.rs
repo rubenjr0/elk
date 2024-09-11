@@ -15,6 +15,7 @@ use super::{
     statements::parse_block,
 };
 
+/// TODO: Find best order
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         parse_variant,
@@ -23,6 +24,7 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
         parse_binary_op,
         parse_unary_op,
         parse_literal,
+        parse_field_access,
         parse_unit,
         parse_function_call,
         parse_identifier_expr,
@@ -126,6 +128,15 @@ fn parse_field(input: &str) -> IResult<&str, (String, Expr)> {
         parse_expr,
     )
     .parse(input)
+}
+
+fn parse_field_access(input: &str) -> IResult<&str, Expr> {
+    let (input, parsed) =
+        separated_pair(parse_identifier_lower, tag("."), parse_identifier_lower).parse(input)?;
+    Ok((
+        input,
+        Expr::FieldAccess(parsed.0.to_string(), parsed.1.to_string()),
+    ))
 }
 
 fn parse_function_call(input: &str) -> IResult<&str, Expr> {

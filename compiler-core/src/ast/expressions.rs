@@ -1,19 +1,18 @@
 use super::statements::Block;
 
-/// We need Expr, Statements, and Blocks.
-/// Blocks contain statements and return an expression.
-
 /// Expr is the base of the AST.
-/// Example: 1 + 2 * 3
-/// Expr: my_value
+/// Example: `1 + 2 * 3`
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Identifier(String),
     Literal(Literal),
     NewVariant(String, String, Vec<Expr>),
     /// Expression for creating a new instance of a type with fields.
-    /// Example: MyType { field1 =  1, field2 = 2 };
+    /// Example: `MyType { field1 =  1, field2 = 2 };`
     NewTypeInstance(String, Vec<(String, Expr)>),
+    /// Identifier, Field
+    /// Example: `my_val.my_field`
+    FieldAccess(String, String),
     FunctionCall(String, Vec<Expr>),
     Match(Pattern, Vec<MatchArm>),
     BinaryOp(Box<Expr>, BinaryOp, Box<Expr>),
@@ -70,7 +69,11 @@ pub enum MatchBody {
 pub enum Pattern {
     Literal(Literal),
     Identifier(String),
+    /// Type, Variant, Fields
     Variant(String, String, Vec<Pattern>),
+    /// Identifier, Field
+    /// Example: `my_val.my_field`
+    Field(String, String),
     Tuple(Vec<Pattern>),
     Wildcard,
 }
@@ -91,6 +94,7 @@ impl TryFrom<Expr> for Pattern {
                     .expect("Failed to convert field to pattern");
                 Ok(Self::Variant(type_name, variant_name, patterns))
             }
+            Expr::FieldAccess(ty, fd) => Ok(Self::Field(ty, fd)),
             Expr::NewTypeInstance(_, _) => Err("Cannot convert NewTypeInstance to Pattern"),
             Expr::FunctionCall(_, _) => Err("Cannot convert FunctionCall to Pattern"),
             Expr::Match(_, _) => Err("Cannot convert Match to Pattern"),
