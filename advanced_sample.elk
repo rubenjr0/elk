@@ -23,6 +23,6 @@ does_like person flavor {
 }
 
 main {
-    alice = Person { name: "Alice", favorite_flavor: Option.Some(Flavor.Orange) };
+    alice = Person { name = "Alice", favorite_flavor = Option.Some(Flavor.Orange) };
     does_alice_like_orange = does_like alice Flavor.Orange;
 }

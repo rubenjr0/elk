@@ -1,0 +1,202 @@
+Compiling advanced_sample.elk...
+Program {
+    function_definitions: [
+        FunctionDefinition {
+            name: "does_like",
+            signature: FunctionSignature {
+                arguments: [
+                    Custom(
+                        "Person",
+                        [],
+                    ),
+                    Custom(
+                        "Flavor",
+                        [],
+                    ),
+                ],
+                return_type: Primitive(
+                    Bool,
+                ),
+            },
+        },
+    ],
+    function_implementations: [
+        FunctionImplementation {
+            name: "does_like",
+            arguments: [
+                "person",
+                "flavor",
+            ],
+            body: MultiLine(
+                Block {
+                    statements: [],
+                    return_expr: Match(
+                        Field(
+                            "person",
+                            "favorite_flavor",
+                        ),
+                        [
+                            MatchArm {
+                                pattern: Variant(
+                                    "Option",
+                                    "Some",
+                                    [
+                                        Identifier(
+                                            "f",
+                                        ),
+                                    ],
+                                ),
+                                body: Expr(
+                                    BinaryOp(
+                                        Identifier(
+                                            "flavor",
+                                        ),
+                                        Eq,
+                                        Identifier(
+                                            "f",
+                                        ),
+                                    ),
+                                ),
+                            },
+                            MatchArm {
+                                pattern: Variant(
+                                    "Option",
+                                    "None",
+                                    [],
+                                ),
+                                body: Expr(
+                                    Literal(
+                                        Bool(
+                                            true,
+                                        ),
+                                    ),
+                                ),
+                            },
+                        ],
+                    ),
+                },
+            ),
+        },
+    ],
+    type_definitions: [
+        CustomType {
+            name: "Option",
+            content: Variants(
+                [
+                    Variant {
+                        name: "Some",
+                        types: [
+                            Custom(
+                                "T",
+                                [],
+                            ),
+                        ],
+                    },
+                    Variant {
+                        name: "None",
+                        types: [],
+                    },
+                ],
+            ),
+            generics: [
+                "T",
+            ],
+        },
+        CustomType {
+            name: "Flavor",
+            content: Variants(
+                [
+                    Variant {
+                        name: "Orange",
+                        types: [],
+                    },
+                    Variant {
+                        name: "Apple",
+                        types: [],
+                    },
+                ],
+            ),
+            generics: [],
+        },
+        CustomType {
+            name: "Person",
+            content: Fields(
+                [
+                    (
+                        "name",
+                        Primitive(
+                            String,
+                        ),
+                    ),
+                    (
+                        "age",
+                        Primitive(
+                            U8,
+                        ),
+                    ),
+                    (
+                        "favorite_flavor",
+                        Custom(
+                            "Option",
+                            [
+                                "Flavor",
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+            generics: [],
+        },
+    ],
+    entry_point: Block {
+        statements: [
+            Assignment(
+                "alice",
+                NewTypeInstance(
+                    "Person",
+                    [
+                        (
+                            "name",
+                            Literal(
+                                String(
+                                    "Alice",
+                                ),
+                            ),
+                        ),
+                        (
+                            "favorite_flavor",
+                            NewVariant(
+                                "Option",
+                                "Some",
+                                [
+                                    NewVariant(
+                                        "Flavor",
+                                        "Orange",
+                                        [],
+                                    ),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+            Assignment(
+                "does_alice_like_orange",
+                FunctionCall(
+                    "does_like",
+                    [
+                        Identifier(
+                            "alice",
+                        ),
+                        NewVariant(
+                            "Flavor",
+                            "Orange",
+                            [],
+                        ),
+                    ],
+                ),
+            ),
+        ],
+        return_expr: Unit,
+    },
+}
