@@ -1,0 +1,6 @@
+[book]
+authors = ["Rubén J."]
+language = "en"
+multilingual = false
+src = "src"
+title = "The Elk Book"
