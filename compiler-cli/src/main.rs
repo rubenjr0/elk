@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-
-use elk_core::{analyze, parse_program};
+use elk_core::process;
 
 #[derive(Parser)]
 struct Args {
@@ -13,13 +12,7 @@ fn main() -> Result<()> {
     let path = args.path;
     println!("Compiling {path}...");
     let src = std::fs::read_to_string(&path)?;
-    match parse_program(&src) {
-        Ok((_, program)) => {
-            println!("{:#?}", program);
-            analyze(&program).unwrap();
-        }
-        Err(e) => println!("{}", e),
-    }
+    process(&src).unwrap();
 
     Ok(())
 }
