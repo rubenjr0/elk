@@ -7,3 +7,4 @@ license-file = "LICENSE"
 [dependencies]
 elk-core = { path = "../compiler-core" }
 clap = { version = "4.5.16", features = ["derive"] }
+anyhow = "1.0.89"

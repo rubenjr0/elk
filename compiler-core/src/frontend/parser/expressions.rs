@@ -8,7 +8,9 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::ast::expressions::{BinaryOp, Expr, Literal, MatchArm, MatchBody, Pattern, UnaryOp};
+use crate::frontend::ast::expressions::{
+    BinaryOp, Expr, Literal, MatchArm, MatchBody, Pattern, UnaryOp,
+};
 
 use super::{
     common::{opt_parenthesis, parse_identifier_lower, parse_identifier_upper, ws},
@@ -247,7 +249,7 @@ fn parse_unary_operator(input: &str) -> IResult<&str, UnaryOp> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::statements::Block;
+    use crate::frontend::ast::statements::Block;
 
     use super::*;
 

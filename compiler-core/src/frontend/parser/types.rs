@@ -7,7 +7,7 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::ast::types::{FunctionSignature, PrimitiveType, Type};
+use crate::frontend::ast::types::{FunctionSignature, PrimitiveType, Type};
 
 use super::{
     common::{parse_identifier_upper, ws},

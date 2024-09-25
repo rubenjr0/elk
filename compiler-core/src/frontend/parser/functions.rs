@@ -3,7 +3,7 @@ use nom::{
     multi::separated_list1, sequence::terminated, IResult, Parser,
 };
 
-use crate::ast::functions::{FunctionBody, FunctionDefinition, FunctionImplementation};
+use crate::frontend::ast::functions::{FunctionBody, FunctionDefinition, FunctionImplementation};
 
 use super::{
     common::{parse_identifier_lower, ws},
@@ -60,7 +60,7 @@ fn parse_function_body_multi_line(input: &str) -> IResult<&str, FunctionBody> {
 #[cfg(test)]
 mod tests {
 
-    use crate::ast::{
+    use crate::frontend::ast::{
         expressions::{Expr, Literal},
         statements::{Block, Statement},
         types::{FunctionSignature, PrimitiveType, Type},

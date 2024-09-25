@@ -1,6 +1,6 @@
 #![warn(clippy::all, clippy::nursery)]
 
-mod ast;
-mod parser;
+mod frontend;
 
-pub use parser::program::parse_program;
+pub use frontend::analysis::analyze;
+pub use frontend::parser::program::parse_program;

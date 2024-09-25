@@ -1,6 +1,6 @@
 use nom::IResult;
 
-use crate::ast::program::Program;
+use crate::frontend::ast::program::Program;
 
 use super::top_level::parse_top_levels;
 

@@ -6,7 +6,7 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::ast::statements::{Block, Statement};
+use crate::frontend::ast::statements::{Block, Statement};
 
 use super::{
     common::{parse_identifier_lower, ws},
@@ -56,11 +56,11 @@ fn parse_return_statement(input: &str) -> IResult<&str, Statement> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{
+        frontend::ast::{
             expressions::{Expr, Literal},
             statements::{Block, Statement},
         },
-        parser::statements::{parse_block, parse_statement},
+        frontend::parser::statements::{parse_block, parse_statement},
     };
 
     #[test]

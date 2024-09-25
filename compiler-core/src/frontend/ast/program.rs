@@ -57,4 +57,8 @@ impl Program {
             entry_point,
         }
     }
+
+    pub fn function_definitions(&self) -> &[FunctionDefinition] {
+        &self.function_definitions
+    }
 }

@@ -1,6 +1,6 @@
 use nom::{branch::alt, bytes::complete::tag, combinator::map, multi::many0, IResult, Parser};
 
-use crate::ast::{statements::Block, top_level::TopLevel};
+use crate::frontend::ast::{statements::Block, top_level::TopLevel};
 
 use super::{
     common::ws,
@@ -30,7 +30,7 @@ fn parse_entrypoint(input: &str) -> IResult<&str, Block> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::top_level::TopLevel;
+    use crate::frontend::ast::top_level::TopLevel;
 
     use super::{parse_top_level, parse_top_levels};
 
@@ -66,7 +66,7 @@ mod tests {
     fn test_parse_top_levels() {
         let input = "
         type MyType {Var1,Var2}
-        
+
         main {}";
         let (_, parsed) = parse_top_levels(input).unwrap();
         assert_eq!(parsed.len(), 2);

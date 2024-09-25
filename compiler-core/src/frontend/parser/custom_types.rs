@@ -8,11 +8,11 @@ use nom::{
 };
 
 use crate::{
-    ast::types::{
+    frontend::ast::types::{
         custom::{CustomTypeContent, Variant},
         CustomType, Type,
     },
-    parser::common::{parse_identifier_upper, ws},
+    frontend::parser::common::{parse_identifier_upper, ws},
 };
 
 use super::{common::parse_identifier_lower, types::parse_type};
@@ -88,8 +88,8 @@ fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::types::custom::{CustomTypeContent, Variant};
-    use crate::ast::types::{PrimitiveType, Type};
+    use crate::frontend::ast::types::custom::{CustomTypeContent, Variant};
+    use crate::frontend::ast::types::{PrimitiveType, Type};
 
     #[test]
     fn test_parse_empty_custom_type() {
