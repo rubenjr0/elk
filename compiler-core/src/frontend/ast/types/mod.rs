@@ -15,6 +15,6 @@ pub enum Type {
     Compound(CompoundType),
     Function(FunctionSignature),
     Unit,
-    /// Pending for type inference
+    /// Pending for type inference. Illegal
     Pending,
 }
