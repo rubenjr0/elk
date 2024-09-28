@@ -14,4 +14,7 @@ pub enum Type {
     Custom(String, Vec<String>),
     Compound(CompoundType),
     Function(FunctionSignature),
+    Unit,
+    /// Pending for type inference
+    Pending,
 }

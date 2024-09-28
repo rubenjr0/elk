@@ -57,7 +57,7 @@ fn parse_return_statement(input: &str) -> IResult<&str, Statement> {
 mod tests {
     use crate::{
         frontend::ast::{
-            expressions::{Expr, Literal},
+            expressions::{Expression, Literal},
             statements::{Block, Statement},
         },
         frontend::parser::statements::{parse_block, parse_statement},
@@ -70,7 +70,7 @@ mod tests {
 
         assert_eq!(
             statement,
-            Statement::Assignment("_z".to_string(), Expr::Literal(Literal::U8(1)))
+            Statement::Assignment("_z".to_string(), Expression::literal(Literal::U8(1)))
         );
     }
 
@@ -79,7 +79,10 @@ mod tests {
         let input = "return 1;";
         let (_, statement) = parse_statement(input).unwrap();
 
-        assert_eq!(statement, Statement::Return(Expr::Literal(Literal::U8(1))));
+        assert_eq!(
+            statement,
+            Statement::Return(Expression::literal(Literal::U8(1)))
+        );
     }
 
     #[test]
@@ -92,9 +95,9 @@ mod tests {
             Block::new(
                 vec![Statement::Assignment(
                     "_z".to_string(),
-                    Expr::Literal(Literal::U8(1))
+                    Expression::literal(Literal::U8(1))
                 ),],
-                Expr::Identifier("_z".to_string())
+                Expression::identifier("_z".to_string())
             )
         );
     }
@@ -109,9 +112,9 @@ mod tests {
             Block::new(
                 vec![Statement::Assignment(
                     "_z".to_string(),
-                    Expr::Literal(Literal::U8(1))
+                    Expression::literal(Literal::U8(1))
                 ),],
-                Expr::Unit
+                Expression::unit()
             )
         );
     }
@@ -121,7 +124,7 @@ mod tests {
         let input = "{ Unit }";
         let (_, block) = parse_block(input).unwrap();
 
-        assert_eq!(block, Block::new(vec![], Expr::Unit));
+        assert_eq!(block, Block::new(vec![], Expression::unit()));
     }
 
     #[test]

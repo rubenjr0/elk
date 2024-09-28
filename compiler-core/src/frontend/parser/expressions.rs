@@ -9,7 +9,7 @@ use nom::{
 };
 
 use crate::frontend::ast::expressions::{
-    BinaryOp, Expr, Literal, MatchArm, MatchBody, Pattern, UnaryOp,
+    BinaryOp, Expression, Literal, MatchArm, MatchBody, Pattern, UnaryOp,
 };
 
 use super::{
@@ -18,7 +18,7 @@ use super::{
 };
 
 /// TODO: Find best order
-pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
+pub fn parse_expr(input: &str) -> IResult<&str, Expression> {
     alt((
         parse_variant,
         parse_new_type_instance,
@@ -34,7 +34,7 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
     .parse(input)
 }
 
-fn parse_literal(input: &str) -> IResult<&str, Expr> {
+fn parse_literal(input: &str) -> IResult<&str, Expression> {
     let (remaining, lit) = alt((
         map(parse_bool, Literal::Bool),
         map(parse_string, Literal::String),
@@ -42,18 +42,18 @@ fn parse_literal(input: &str) -> IResult<&str, Expr> {
         map(i8, Literal::I8),
     ))
     .parse(input)?;
-    Ok((remaining, Expr::Literal(lit)))
+    Ok((remaining, Expression::literal(lit)))
 }
 
-fn parse_identifier_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_identifier_expr(input: &str) -> IResult<&str, Expression> {
     map(parse_identifier_lower, |id| {
-        Expr::Identifier(id.to_string())
+        Expression::identifier(id.to_string())
     })
     .parse(input)
 }
 
-fn parse_unit(input: &str) -> IResult<&str, Expr> {
-    map(tag("Unit"), |_| Expr::Unit).parse(input)
+fn parse_unit(input: &str) -> IResult<&str, Expression> {
+    map(tag("Unit"), |_| Expression::unit()).parse(input)
 }
 
 fn parse_string(input: &str) -> IResult<&str, String> {
@@ -84,7 +84,7 @@ fn parse_bool(input: &str) -> IResult<&str, bool> {
 /// Expression for creating a new instance of a type with variants
 /// Example: `MyType.Variant`
 /// Example: `MyType.Variant(1, 2)`
-fn parse_variant(input: &str) -> IResult<&str, Expr> {
+fn parse_variant(input: &str) -> IResult<&str, Expression> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, _) = tag(".").parse(input)?;
     let (input, variant) = parse_identifier_upper(input)?;
@@ -92,11 +92,11 @@ fn parse_variant(input: &str) -> IResult<&str, Expr> {
 
     Ok((
         input,
-        Expr::NewVariant(ty.to_string(), variant.to_string(), args),
+        Expression::new_variant(ty.to_string(), variant.to_string(), args),
     ))
 }
 
-fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expression>> {
     opt(delimited(
         tag("("),
         separated_list1(ws(tag(",")), parse_expr),
@@ -107,14 +107,14 @@ fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expr>> {
 }
 
 /// Example: `MyType { field1 = 1, field2 = 2 }`
-fn parse_new_type_instance(input: &str) -> IResult<&str, Expr> {
+fn parse_new_type_instance(input: &str) -> IResult<&str, Expression> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, fields) = parse_fields(input)?;
 
-    Ok((input, Expr::NewTypeInstance(ty.to_string(), fields)))
+    Ok((input, Expression::new_type_instance(ty.to_string(), fields)))
 }
 
-fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expr)>> {
+fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expression)>> {
     delimited(
         ws(tag("{")),
         separated_list0(ws(tag(",")), parse_field),
@@ -123,7 +123,7 @@ fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expr)>> {
     .parse(input)
 }
 
-fn parse_field(input: &str) -> IResult<&str, (String, Expr)> {
+fn parse_field(input: &str) -> IResult<&str, (String, Expression)> {
     separated_pair(
         parse_identifier_lower.map(str::to_string),
         ws(tag("=")),
@@ -132,19 +132,23 @@ fn parse_field(input: &str) -> IResult<&str, (String, Expr)> {
     .parse(input)
 }
 
-fn parse_field_access(input: &str) -> IResult<&str, Expr> {
+/// example: `my_val.some_field`
+fn parse_field_access(input: &str) -> IResult<&str, Expression> {
     let (input, parsed) =
         separated_pair(parse_identifier_lower, tag("."), parse_identifier_lower).parse(input)?;
     Ok((
         input,
-        Expr::FieldAccess(parsed.0.to_string(), parsed.1.to_string()),
+        Expression::field_access(parsed.0.to_string(), parsed.1.to_string()),
     ))
 }
 
-fn parse_function_call(input: &str) -> IResult<&str, Expr> {
+fn parse_function_call(input: &str) -> IResult<&str, Expression> {
     let (input, function_name) = parse_identifier_lower(input)?;
     let (input, args) = parse_function_args(input)?;
-    Ok((input, Expr::FunctionCall(function_name.to_string(), args)))
+    Ok((
+        input,
+        Expression::function_call(function_name.to_string(), args),
+    ))
 }
 
 /// Expressions separated by spaces, optionally between parentheses
@@ -153,7 +157,7 @@ fn parse_function_call(input: &str) -> IResult<&str, Expr> {
 /// expr -> is function call?
 /// - yes: nested function calls must go between parenthesis
 /// - no: function call doesnt need to go between parenthesis
-fn parse_function_args(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_function_args(input: &str) -> IResult<&str, Vec<Expression>> {
     ws(separated_list1(
         multispace1,
         alt((
@@ -169,14 +173,14 @@ fn parse_function_args(input: &str) -> IResult<&str, Vec<Expr>> {
     .parse(input)
 }
 
-fn parse_match(input: &str) -> IResult<&str, Expr> {
+fn parse_match(input: &str) -> IResult<&str, Expression> {
     let (input, _) = tag("match").parse(input)?;
     let (input, pat) = parse_pattern(input)?;
     let (input, _) = ws(tag("{")).parse(input)?;
     let (input, cases) = separated_list0(ws(tag(",")), parse_match_arm).parse(input)?;
     let (input, _) = ws(tag("}")).parse(input)?;
 
-    Ok((input, Expr::Match(pat, cases)))
+    Ok((input, Expression::match_expr(pat, cases)))
 }
 
 fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
@@ -202,7 +206,7 @@ fn parse_match_body(input: &str) -> IResult<&str, MatchBody> {
 }
 
 /// Kinda same problem as `parse_function_call`
-fn parse_binary_op(input: &str) -> IResult<&str, Expr> {
+fn parse_binary_op(input: &str) -> IResult<&str, Expression> {
     let (input, left) = alt((
         parse_literal,
         parse_identifier_expr,
@@ -213,7 +217,7 @@ fn parse_binary_op(input: &str) -> IResult<&str, Expr> {
     let (input, op) = ws(parse_binary_operator).parse(input)?;
     let (input, right) = parse_expr(input)?;
 
-    Ok((input, Expr::BinaryOp(Box::new(left), op, Box::new(right))))
+    Ok((input, Expression::binary_op(left, op, right)))
 }
 
 fn parse_binary_operator(input: &str) -> IResult<&str, BinaryOp> {
@@ -235,11 +239,11 @@ fn parse_binary_operator(input: &str) -> IResult<&str, BinaryOp> {
     .parse(input)
 }
 
-fn parse_unary_op(input: &str) -> IResult<&str, Expr> {
+fn parse_unary_op(input: &str) -> IResult<&str, Expression> {
     let (input, op) = parse_unary_operator(input)?;
     let (input, operand) = alt((parse_literal, parse_identifier_expr)).parse(input)?;
 
-    Ok((input, Expr::UnaryOp(op, Box::new(operand))))
+    Ok((input, Expression::unary_op(op, operand)))
 }
 
 /// TODO: Add more operators (?)
@@ -257,21 +261,21 @@ mod tests {
     fn test_parse_literal_bool() {
         let input = "True";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expr::Literal(Literal::Bool(true)));
+        assert_eq!(expr, Expression::literal(Literal::Bool(true)));
     }
 
     #[test]
     fn test_parse_literal_u8() {
         let input = "37";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expr::Literal(Literal::U8(37)));
+        assert_eq!(expr, Expression::literal(Literal::U8(37)));
     }
 
     #[test]
     fn test_parse_literal_i8() {
         let input = "-37";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expr::Literal(Literal::I8(-37)));
+        assert_eq!(expr, Expression::literal(Literal::I8(-37)));
     }
 
     #[test]
@@ -281,7 +285,7 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expr::Literal(Literal::String("hello, \"world\"".to_string()))
+            Expression::literal(Literal::String("hello, \"world\"".to_string()))
         );
     }
 
@@ -290,7 +294,7 @@ mod tests {
         let input = "my_var";
         let (_, expr) = parse_expr(input).unwrap();
 
-        assert_eq!(expr, Expr::Identifier("my_var".to_string()));
+        assert_eq!(expr, Expression::identifier("my_var".to_string()));
     }
 
     #[test]
@@ -298,7 +302,7 @@ mod tests {
         let input = "Unit";
         let (_, expr) = parse_expr(input).unwrap();
 
-        assert_eq!(expr, Expr::Unit);
+        assert_eq!(expr, Expression::unit());
     }
 
     #[test]
@@ -307,7 +311,7 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expr::NewVariant("Option".to_string(), "None".to_string(), vec![])
+            Expression::new_variant("Option".to_string(), "None".to_string(), vec![])
         );
     }
 
@@ -318,12 +322,12 @@ mod tests {
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
-            Expr::NewVariant(
+            Expression::new_variant(
                 "Option".to_string(),
                 "Some".to_string(),
                 vec![
-                    Expr::Literal(Literal::U8(1)),
-                    Expr::Identifier("some_id".to_string()),
+                    Expression::literal(Literal::U8(1)),
+                    Expression::identifier("some_id".to_string()),
                 ]
             )
         );
@@ -335,14 +339,17 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expr::NewTypeInstance(
+            Expression::new_type_instance(
                 "Person".to_string(),
                 vec![
                     (
                         "name".to_string(),
-                        Expr::Literal(Literal::String("Bob".to_string()))
+                        Expression::literal(Literal::String("Bob".to_string()))
                     ),
-                    ("is_builder".to_string(), Expr::Literal(Literal::Bool(true))),
+                    (
+                        "is_builder".to_string(),
+                        Expression::literal(Literal::Bool(true))
+                    ),
                 ]
             )
         );
@@ -354,11 +361,11 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expr::FunctionCall(
+            Expression::function_call(
                 "my_function".to_string(),
                 vec![
-                    Expr::Identifier("arg1".to_string()),
-                    Expr::Identifier("arg2".to_string()),
+                    Expression::identifier("arg1".to_string()),
+                    Expression::identifier("arg2".to_string()),
                 ]
             )
         );
@@ -370,18 +377,18 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expr::FunctionCall(
+            Expression::function_call(
                 "my_function".to_string(),
                 vec![
-                    Expr::FunctionCall(
+                    Expression::function_call(
                         "other_fn".to_string(),
-                        vec![Expr::Literal(Literal::U8(42))]
+                        vec![Expression::literal(Literal::U8(42))]
                     ),
-                    Expr::NewTypeInstance(
+                    Expression::new_type_instance(
                         "Person".to_string(),
                         vec![(
                             "name".to_string(),
-                            Expr::Literal(Literal::String("Bob".to_string()))
+                            Expression::literal(Literal::String("Bob".to_string()))
                         )]
                     )
                 ]
@@ -395,11 +402,11 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expr::FunctionCall(
+            Expression::function_call(
                 "my_function".to_string(),
-                vec![Expr::FunctionCall(
+                vec![Expression::function_call(
                     "other_fn".to_string(),
-                    vec![Expr::Literal(Literal::U8(42))]
+                    vec![Expression::literal(Literal::U8(42))]
                 ),]
             )
         );
@@ -415,16 +422,16 @@ mod tests {
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
-            Expr::Match(
+            Expression::match_expr(
                 Pattern::Identifier("my_bool".to_string()),
                 vec![
                     MatchArm {
                         pattern: Pattern::Literal(Literal::Bool(true)),
-                        body: MatchBody::Expr(Expr::Literal(Literal::U8(1))),
+                        body: MatchBody::Expr(Expression::literal(Literal::U8(1))),
                     },
                     MatchArm {
                         pattern: Pattern::Literal(Literal::Bool(false)),
-                        body: MatchBody::Expr(Expr::Literal(Literal::U8(0)))
+                        body: MatchBody::Expr(Expression::literal(Literal::U8(0)))
                     }
                 ]
             )
@@ -441,7 +448,7 @@ mod tests {
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
-            Expr::Match(
+            Expression::match_expr(
                 Pattern::Variant(
                     "Option".to_string(),
                     "Some".to_string(),
@@ -450,11 +457,11 @@ mod tests {
                 vec![
                     MatchArm {
                         pattern: Pattern::Literal(Literal::U8(1)),
-                        body: MatchBody::Expr(Expr::Literal(Literal::Bool(true))),
+                        body: MatchBody::Expr(Expression::literal(Literal::Bool(true))),
                     },
                     MatchArm {
                         pattern: Pattern::Wildcard,
-                        body: MatchBody::Expr(Expr::Literal(Literal::Bool(false)))
+                        body: MatchBody::Expr(Expression::literal(Literal::Bool(false)))
                     }
                 ]
             )
@@ -478,7 +485,7 @@ mod tests {
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
-            Expr::Match(
+            Expression::match_expr(
                 Pattern::Identifier("my_option".to_string()),
                 vec![
                     MatchArm {
@@ -489,12 +496,12 @@ mod tests {
                         ),
                         body: MatchBody::Block(Block::new(
                             vec![],
-                            Expr::Literal(Literal::Bool(true))
+                            Expression::literal(Literal::Bool(true))
                         )),
                     },
                     MatchArm {
                         pattern: Pattern::Variant("Option".to_string(), "None".to_string(), vec![]),
-                        body: MatchBody::Expr(Expr::Literal(Literal::Bool(false)))
+                        body: MatchBody::Expr(Expression::literal(Literal::Bool(false)))
                     }
                 ]
             )
@@ -507,10 +514,10 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expr::BinaryOp(
-                Box::new(Expr::Literal(Literal::U8(1))),
+            Expression::binary_op(
+                Expression::literal(Literal::U8(1)),
                 BinaryOp::Add,
-                Box::new(Expr::Literal(Literal::U8(2)))
+                Expression::literal(Literal::U8(2))
             )
         );
     }
@@ -522,10 +529,7 @@ mod tests {
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
-            Expr::UnaryOp(
-                UnaryOp::Negate,
-                Box::new(Expr::Literal(Literal::Bool(true)))
-            )
+            Expression::unary_op(UnaryOp::Negate, Expression::literal(Literal::Bool(true)))
         );
     }
 }
