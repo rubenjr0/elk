@@ -5,8 +5,8 @@ use super::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
-    kind: ExpressionKind,
-    associated_type: Type,
+    pub kind: ExpressionKind,
+    pub associated_type: Type,
 }
 
 /// Expr is the base of the AST.

@@ -13,7 +13,7 @@ pub enum Statement {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     statements: Vec<Statement>,
-    return_expr: Expression,
+    pub return_expr: Expression,
 }
 
 impl Block {

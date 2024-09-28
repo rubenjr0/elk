@@ -6,3 +6,5 @@ pub mod program;
 mod statements;
 mod top_level;
 mod types;
+
+pub(crate) use expressions::parse_expr;
