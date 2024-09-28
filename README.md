@@ -17,6 +17,7 @@ Inspired by Gleam, Rust, Elm, Haskell and Scala.
 - Monads?
 - Currying, Piping
 - Errors as values, no exceptions
+- Cargo-like project manager
 
 ## To think about
 ### Functions
