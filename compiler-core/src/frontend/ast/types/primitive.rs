@@ -9,5 +9,4 @@ pub enum PrimitiveType {
     P32,
     Bool,
     String,
-    Unit,
 }

@@ -61,7 +61,7 @@ fn parse_function_body_multi_line(input: &str) -> IResult<&str, FunctionBody> {
 mod tests {
 
     use crate::frontend::ast::{
-        expressions::{Expr, Literal},
+        expressions::{Expression, Literal},
         statements::{Block, Statement},
         types::{FunctionSignature, PrimitiveType, Type},
     };
@@ -90,7 +90,10 @@ mod tests {
 
         assert_eq!(function_impl.name(), "my_function");
         assert_eq!(function_impl.arguments(), &["_x"]);
-        assert_eq!(function_impl.body(), &FunctionBody::SingleLine(Expr::Unit));
+        assert_eq!(
+            function_impl.body(),
+            &FunctionBody::SingleLine(Expression::unit())
+        );
     }
 
     #[test]
@@ -102,7 +105,7 @@ mod tests {
         assert_eq!(function_impl.arguments(), &["_x", "_y"]);
         assert_eq!(
             function_impl.body(),
-            &FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))
+            &FunctionBody::SingleLine(Expression::literal(Literal::U8(1)))
         );
     }
 
@@ -116,7 +119,7 @@ mod tests {
 
         let expected_statements = vec![Statement::Assignment(
             "_z".to_string(),
-            Expr::Literal(Literal::U8(1)),
+            Expression::literal(Literal::U8(1)),
         )];
 
         assert_eq!(function_impl.name(), "my_function");
@@ -125,7 +128,7 @@ mod tests {
             function_impl.body(),
             &FunctionBody::MultiLine(Block::new(
                 expected_statements,
-                Expr::Identifier("_z".to_string())
+                Expression::identifier("_z".to_string())
             ))
         );
     }
@@ -145,7 +148,7 @@ mod tests {
         assert!(remaining.is_empty());
         assert_eq!(
             function_body,
-            FunctionBody::SingleLine(Expr::Literal(Literal::U8(1)))
+            FunctionBody::SingleLine(Expression::literal(Literal::U8(1)))
         );
     }
 
@@ -158,7 +161,7 @@ mod tests {
             function_body,
             FunctionBody::MultiLine(Block::new_without_return(vec![Statement::Assignment(
                 "_z".to_string(),
-                Expr::Literal(Literal::U8(1))
+                Expression::literal(Literal::U8(1))
             )]))
         );
     }

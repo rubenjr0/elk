@@ -1,4 +1,4 @@
-use super::{expressions::Expr, statements::Block, types::FunctionSignature};
+use super::{expressions::Expression, statements::Block, types::FunctionSignature};
 
 #[derive(Debug, Clone)]
 pub struct FunctionDefinition {
@@ -15,7 +15,7 @@ pub struct FunctionImplementation {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FunctionBody {
-    SingleLine(Expr),
+    SingleLine(Expression),
     MultiLine(Block),
 }
 
