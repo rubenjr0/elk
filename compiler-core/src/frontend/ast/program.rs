@@ -16,9 +16,9 @@ pub struct Program {
 
 impl Program {
     pub const fn new(
+        type_definitions: Vec<CustomType>,
         function_definitions: Vec<FunctionDefinition>,
         function_implementations: Vec<FunctionImplementation>,
-        type_definitions: Vec<CustomType>,
         entry_point: Block,
     ) -> Self {
         Self {
@@ -58,7 +58,19 @@ impl Program {
         }
     }
 
+    pub fn custom_types(&self) -> &[CustomType] {
+        &self.type_definitions
+    }
+
     pub fn function_definitions(&self) -> &[FunctionDefinition] {
         &self.function_definitions
+    }
+
+    pub fn function_implementations(&self) -> &[FunctionImplementation] {
+        &self.function_implementations
+    }
+
+    pub fn entry_point(&self) -> &Block {
+        &self.entry_point
     }
 }
