@@ -272,6 +272,34 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_literal_binary() {
+        let input = "0b110";
+        let (_, expr) = parse_expr(input).unwrap();
+        assert_eq!(expr, Expression::literal(Literal::U8(6)));
+    }
+
+    #[test]
+    fn test_parse_literal_octal() {
+        let input = "0o20";
+        let (_, expr) = parse_expr(input).unwrap();
+        assert_eq!(expr, Expression::literal(Literal::U8(16)));
+    }
+
+    #[test]
+    fn test_parse_literal_hexadecimal() {
+        let input = "0x20";
+        let (_, expr) = parse_expr(input).unwrap();
+        assert_eq!(expr, Expression::literal(Literal::U8(32)));
+    }
+
+    #[test]
+    fn test_parse_literal_f32() {
+        let input = "0.12";
+        let (_, expr) = parse_expr(input).unwrap();
+        assert_eq!(expr, Expression::literal(Literal::F32(0.12)));
+    }
+
+    #[test]
     fn test_parse_literal_i8() {
         let input = "-37";
         let (_, expr) = parse_expr(input).unwrap();
