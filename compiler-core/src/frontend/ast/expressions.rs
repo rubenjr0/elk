@@ -59,14 +59,14 @@ impl Expression {
         }
     }
 
-    pub fn new_variant(type_name: String, variant_name: String, fields: Vec<Expression>) -> Self {
+    pub fn new_variant(type_name: String, variant_name: String, fields: Vec<Self>) -> Self {
         Self {
             kind: ExpressionKind::NewVariant(type_name.clone(), variant_name, fields),
             associated_type: Type::Custom(type_name, vec![]),
         }
     }
 
-    pub fn new_type_instance(type_name: String, fields: Vec<(String, Expression)>) -> Self {
+    pub fn new_type_instance(type_name: String, fields: Vec<(String, Self)>) -> Self {
         let associated_type = Type::Custom(type_name.clone(), vec![]);
         Self {
             kind: ExpressionKind::NewTypeInstance(type_name, fields),
@@ -74,35 +74,35 @@ impl Expression {
         }
     }
 
-    pub fn field_access(type_name: String, field_name: String) -> Self {
+    pub const fn field_access(type_name: String, field_name: String) -> Self {
         Self {
             kind: ExpressionKind::FieldAccess(type_name, field_name),
             associated_type: Type::Pending,
         }
     }
 
-    pub fn function_call(name: String, args: Vec<Expression>) -> Self {
+    pub const fn function_call(name: String, args: Vec<Self>) -> Self {
         Self {
             kind: ExpressionKind::FunctionCall(name, args),
             associated_type: Type::Pending,
         }
     }
 
-    pub fn match_expr(pattern: Pattern, arms: Vec<MatchArm>) -> Self {
+    pub const fn match_expr(pattern: Pattern, arms: Vec<MatchArm>) -> Self {
         Self {
             kind: ExpressionKind::Match(pattern, arms),
             associated_type: Type::Pending,
         }
     }
 
-    pub fn binary_op(lhs: Expression, op: BinaryOp, rhs: Expression) -> Self {
+    pub fn binary_op(lhs: Self, op: BinaryOp, rhs: Self) -> Self {
         Self {
             kind: ExpressionKind::BinaryOp(Box::new(lhs), op, Box::new(rhs)),
             associated_type: Type::Pending,
         }
     }
 
-    pub fn unary_op(op: UnaryOp, expr: Expression) -> Self {
+    pub fn unary_op(op: UnaryOp, expr: Self) -> Self {
         Self {
             kind: ExpressionKind::UnaryOp(op, Box::new(expr)),
             associated_type: Type::Pending,

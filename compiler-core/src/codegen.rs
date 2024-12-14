@@ -48,18 +48,15 @@ impl Codegen {
         self.compile_block(program.entry_point())
     }
 
-    fn compile_custom_type(&mut self, custom_type: &CustomType) {
+    fn compile_custom_type(&self, custom_type: &CustomType) {
         eprintln!("Compiling custom type: {:?}", custom_type);
     }
 
-    fn compile_function_definition(&mut self, function_definition: &FunctionDefinition) {
+    fn compile_function_definition(&self, function_definition: &FunctionDefinition) {
         eprintln!("Compiling function definition: {:?}", function_definition);
     }
 
-    fn compile_function_implementation(
-        &mut self,
-        function_implementation: &FunctionImplementation,
-    ) {
+    fn compile_function_implementation(&self, function_implementation: &FunctionImplementation) {
         eprintln!(
             "Compiling function implementation: {:?}",
             function_implementation

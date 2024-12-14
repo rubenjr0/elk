@@ -70,7 +70,7 @@ impl Program {
         &self.function_implementations
     }
 
-    pub fn entry_point(&self) -> &Block {
+    pub const fn entry_point(&self) -> &Block {
         &self.entry_point
     }
 }

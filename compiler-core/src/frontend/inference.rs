@@ -46,12 +46,12 @@ mod test {
     use crate::frontend::{
         ast::types::{PrimitiveType, Type},
         inference::infer_match_expr,
-        parser::parse_expr,
+        parser,
     };
 
     #[test]
     fn test_infer_match_expr() {
-        let (rem, mut expr) = parse_expr(
+        let (rem, mut expr) = parser::expressions::parse_expr(
             "match some_val {
                 True -> 1,
                 False -> 2
