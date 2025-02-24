@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use codegen::Context;
+use codegen::{control::ControlPlane, Context};
 use cranelift::prelude::*;
 use isa::TargetIsa;
 
@@ -72,14 +72,11 @@ impl Codegen {
         builder.ins().return_(&[]);
         builder.seal_block(blk);
         builder.finalize();
-        let mut buffer = Vec::new();
+        let mut ctrl_plane = ControlPlane::default();
         self.ctx
-            .compile_and_emit(
-                self.isa.as_ref(),
-                &mut buffer,
-                &mut codegen::control::ControlPlane::default(),
-            )
-            .unwrap();
-        buffer
+            .compile(self.isa.as_ref(), &mut ctrl_plane)
+            .unwrap()
+            .code_buffer()
+            .to_vec()
     }
 }
