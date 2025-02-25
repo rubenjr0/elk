@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     let src = std::fs::read_to_string(&path)?;
     let program = process(&src).unwrap();
 
-    let mut codegen = Codegen::new();
+    let mut codegen = Codegen::default();
     let compiled = codegen.compile_program(&program);
 
     let output_path = args.output_path.unwrap_or_else(|| "a.out".to_string());

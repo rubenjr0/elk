@@ -17,8 +17,8 @@ pub struct Codegen {
     isa: Arc<dyn TargetIsa>,
 }
 
-impl Codegen {
-    pub fn new() -> Self {
+impl Default for Codegen {
+    fn default() -> Self {
         let ctx = cranelift::codegen::Context::new();
         let builder_context = FunctionBuilderContext::new();
         let flag_builder = settings::builder();
@@ -31,7 +31,9 @@ impl Codegen {
             isa,
         }
     }
+}
 
+impl Codegen {
     pub fn compile_program(&mut self, program: &Program) -> Vec<u8> {
         for custom_type in program.custom_types() {
             self.compile_custom_type(custom_type);
