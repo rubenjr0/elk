@@ -1,4 +1,4 @@
-#![warn(clippy::all, clippy::nursery)]
+#![warn(clippy::all)]
 
 mod codegen;
 mod frontend;
