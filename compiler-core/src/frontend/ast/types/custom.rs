@@ -1,6 +1,7 @@
 use super::Type;
 
 #[derive(Debug, Clone, PartialEq)]
+/// Data type defined by the user
 pub struct CustomType {
     name: String,
     content: CustomTypeContent,
@@ -8,14 +9,14 @@ pub struct CustomType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Data types defined by the user can be Enums, Records, or Markers (empty)
 pub enum CustomTypeContent {
-    Variants(Vec<Variant>),
-    Fields(Vec<(String, Type)>),
+    Enum(Vec<Variant>),
+    Record(Vec<(String, Type)>),
     Empty,
 }
 
-/// Named: `VariantA, VariantB`
-/// Tuple: `VariantA(U8, Bool), VariantB(I8)`
+/// Variants of an enum, can contain types
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variant {
     name: String,

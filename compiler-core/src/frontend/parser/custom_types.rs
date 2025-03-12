@@ -41,8 +41,8 @@ pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
 
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
     if let Ok((remaining, contents)) = alt((
-        map(parse_variants, CustomTypeContent::Variants),
-        map(parse_fields, CustomTypeContent::Fields),
+        map(parse_variants, CustomTypeContent::Enum),
+        map(parse_fields, CustomTypeContent::Record),
     ))
     .parse(input)
     {
@@ -106,10 +106,7 @@ mod tests {
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Variants(vec![
-                Variant::named("VariantA"),
-                Variant::named("VariantB"),
-            ])
+            &CustomTypeContent::Enum(vec![Variant::named("VariantA"), Variant::named("VariantB"),])
         );
     }
 
@@ -120,7 +117,7 @@ mod tests {
         assert_eq!(parsed.name(), "Option");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Variants(vec![
+            &CustomTypeContent::Enum(vec![
                 Variant::new("Some", vec![Type::Custom("T".to_string(), vec![])]),
                 Variant::named("None"),
             ])
@@ -134,7 +131,7 @@ mod tests {
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Fields(vec![
+            &CustomTypeContent::Record(vec![
                 ("admin".to_string(), Type::Primitive(PrimitiveType::Bool)),
                 ("age".to_string(), Type::Primitive(PrimitiveType::U8)),
             ])
