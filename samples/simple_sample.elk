@@ -1,0 +1,10 @@
+sum : U8 -> U8 -> U8;
+
+sum a b = a + b;
+
+main {
+    x = 1;
+    y = 2;
+    z = sum x y;
+    z
+}

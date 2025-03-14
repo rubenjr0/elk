@@ -3,7 +3,7 @@ use nom::{
     multi::separated_list1, sequence::terminated, IResult, Parser,
 };
 
-use crate::frontend::ast::functions::{FunctionBody, FunctionDefinition, FunctionImplementation};
+use crate::frontend::ast::functions::{FunctionBody, FunctionDeclaration, FunctionImplementation};
 
 use super::{
     common::{parse_identifier_lower, ws},
@@ -12,13 +12,13 @@ use super::{
     types::parse_function_signature,
 };
 
-pub fn parse_function_definition(input: &str) -> IResult<&str, FunctionDefinition> {
+pub fn parse_function_definition(input: &str) -> IResult<&str, FunctionDeclaration> {
     let (input, name) = parse_identifier_lower(input)?;
     let (input, _) = ws(tag(":")).parse(input)?;
     let (input, signature) = parse_function_signature(input)?;
     let (input, _) = ws(tag(";")).parse(input)?;
 
-    Ok((input, FunctionDefinition::new(name, signature)))
+    Ok((input, FunctionDeclaration::new(name, signature)))
 }
 
 pub fn parse_function_impl(input: &str) -> IResult<&str, FunctionImplementation> {
@@ -34,7 +34,7 @@ pub fn parse_function_impl(input: &str) -> IResult<&str, FunctionImplementation>
 fn parse_function_args(input: &str) -> IResult<&str, Vec<String>> {
     ws(separated_list1(
         multispace1,
-        parse_identifier_lower.map(str::to_string),
+        parse_identifier_lower.map(str::to_owned),
     ))
     .parse(input)
 }
@@ -63,7 +63,7 @@ mod tests {
     use crate::frontend::ast::{
         expressions::{Expression, Literal},
         statements::{Block, Statement},
-        types::{FunctionSignature, PrimitiveType, Type},
+        types::{FunctionSignature, Type},
     };
 
     use super::*;
@@ -76,10 +76,7 @@ mod tests {
         assert_eq!(function.name(), "my_function");
         assert_eq!(
             function.signature(),
-            &FunctionSignature::new(
-                vec![Type::Primitive(PrimitiveType::U8)],
-                Type::Primitive(PrimitiveType::U8)
-            )
+            &FunctionSignature::new(vec![Type::U8], Type::U8)
         );
     }
 
@@ -105,7 +102,7 @@ mod tests {
         assert_eq!(function_impl.arguments(), &["_x", "_y"]);
         assert_eq!(
             function_impl.body(),
-            &FunctionBody::SingleLine(Expression::literal(Literal::U8(1)))
+            &FunctionBody::SingleLine(Expression::literal(Literal::u8(1)))
         );
     }
 
@@ -118,8 +115,8 @@ mod tests {
         let (_, function_impl) = parse_function_impl(input).unwrap();
 
         let expected_statements = vec![Statement::Assignment(
-            "_z".to_string(),
-            Expression::literal(Literal::U8(1)),
+            "_z".to_owned(),
+            Expression::literal(Literal::u8(1)),
         )];
 
         assert_eq!(function_impl.name(), "my_function");
@@ -128,7 +125,7 @@ mod tests {
             function_impl.body(),
             &FunctionBody::MultiLine(Block::new(
                 expected_statements,
-                Expression::identifier("_z".to_string())
+                Expression::identifier("_z".to_owned())
             ))
         );
     }
@@ -148,7 +145,7 @@ mod tests {
         assert!(remaining.is_empty());
         assert_eq!(
             function_body,
-            FunctionBody::SingleLine(Expression::literal(Literal::U8(1)))
+            FunctionBody::SingleLine(Expression::literal(Literal::u8(1)))
         );
     }
 
@@ -160,8 +157,8 @@ mod tests {
         assert_eq!(
             function_body,
             FunctionBody::MultiLine(Block::new_without_return(vec![Statement::Assignment(
-                "_z".to_string(),
-                Expression::literal(Literal::U8(1))
+                "_z".to_owned(),
+                Expression::literal(Literal::u8(1))
             )]))
         );
     }

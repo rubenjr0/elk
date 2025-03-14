@@ -1,11 +1,15 @@
 use anyhow::Result;
 use clap::Parser;
-use elk_core::{process, Codegen};
+use elk_core::compile_to_object;
 
 #[derive(Parser)]
 struct Args {
+    /// Input file path
     input_path: String,
-    output_path: Option<String>,
+
+    /// Output file path
+    #[arg(short, long, default_value = "temp.o")]
+    output_path: String,
 }
 
 fn main() -> Result<()> {
@@ -13,13 +17,16 @@ fn main() -> Result<()> {
     let path = args.input_path;
     println!("Compiling {path}...");
     let src = std::fs::read_to_string(&path)?;
-    let program = process(&src).unwrap();
 
-    let mut codegen = Codegen::default();
-    let compiled = codegen.compile_program(&program);
+    let compiled = compile_to_object(&src);
 
-    let output_path = args.output_path.unwrap_or_else(|| "a.out".to_string());
-    std::fs::write(output_path, compiled)?;
+    std::fs::write(&args.output_path, compiled)?;
+    std::process::Command::new("gcc")
+        .arg(&args.output_path)
+        .status()
+        .unwrap();
+
+    // std::fs::remove_file(args.output_path).unwrap();
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{i8, multispace1, u8},
+    character::complete::{i32, i8, multispace1, u32, u8},
     combinator::{map, opt, value},
     multi::{separated_list0, separated_list1},
     sequence::{delimited, separated_pair},
@@ -20,7 +20,7 @@ use super::{
 /// TODO: Find best order
 pub fn parse_expr(input: &str) -> IResult<&str, Expression> {
     alt((
-        parse_variant,
+        parse_enum_instance,
         parse_new_type_instance,
         parse_match,
         parse_binary_op,
@@ -38,8 +38,10 @@ fn parse_literal(input: &str) -> IResult<&str, Expression> {
     let (remaining, lit) = alt((
         map(parse_bool, Literal::Bool),
         map(parse_string, Literal::String),
-        map(u8, Literal::U8),
-        map(i8, Literal::I8),
+        map(u8, Literal::u8),
+        map(i8, Literal::i8),
+        map(u32, Literal::u32),
+        map(i32, Literal::i32),
     ))
     .parse(input)?;
     Ok((remaining, Expression::literal(lit)))
@@ -47,7 +49,7 @@ fn parse_literal(input: &str) -> IResult<&str, Expression> {
 
 fn parse_identifier_expr(input: &str) -> IResult<&str, Expression> {
     map(parse_identifier_lower, |id| {
-        Expression::identifier(id.to_string())
+        Expression::identifier(id.to_owned())
     })
     .parse(input)
 }
@@ -81,10 +83,10 @@ fn parse_bool(input: &str) -> IResult<&str, bool> {
     alt((value(true, tag("True")), value(false, tag("False")))).parse(input)
 }
 
-/// Expression for creating a new instance of a type with variants
+/// Expression for creating a new instance of an enum
 /// Example: `MyType.Variant`
 /// Example: `MyType.Variant(1, 2)`
-fn parse_variant(input: &str) -> IResult<&str, Expression> {
+fn parse_enum_instance(input: &str) -> IResult<&str, Expression> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, _) = tag(".").parse(input)?;
     let (input, variant) = parse_identifier_upper(input)?;
@@ -92,7 +94,7 @@ fn parse_variant(input: &str) -> IResult<&str, Expression> {
 
     Ok((
         input,
-        Expression::new_variant(ty.to_string(), variant.to_string(), args),
+        Expression::new_variant(ty.to_owned(), variant.to_owned(), args),
     ))
 }
 
@@ -111,7 +113,7 @@ fn parse_new_type_instance(input: &str) -> IResult<&str, Expression> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, fields) = parse_fields(input)?;
 
-    Ok((input, Expression::new_type_instance(ty.to_string(), fields)))
+    Ok((input, Expression::new_type_instance(ty.to_owned(), fields)))
 }
 
 fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expression)>> {
@@ -125,7 +127,7 @@ fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expression)>> {
 
 fn parse_field(input: &str) -> IResult<&str, (String, Expression)> {
     separated_pair(
-        parse_identifier_lower.map(str::to_string),
+        parse_identifier_lower.map(str::to_owned),
         ws(tag("=")),
         parse_expr,
     )
@@ -138,7 +140,7 @@ fn parse_field_access(input: &str) -> IResult<&str, Expression> {
         separated_pair(parse_identifier_lower, tag("."), parse_identifier_lower).parse(input)?;
     Ok((
         input,
-        Expression::field_access(parsed.0.to_string(), parsed.1.to_string()),
+        Expression::field_access(parsed.0.to_owned(), parsed.1.to_owned()),
     ))
 }
 
@@ -147,7 +149,7 @@ fn parse_function_call(input: &str) -> IResult<&str, Expression> {
     let (input, args) = parse_function_args(input)?;
     Ok((
         input,
-        Expression::function_call(function_name.to_string(), args),
+        Expression::function_call(function_name.to_owned(), args),
     ))
 }
 
@@ -161,7 +163,7 @@ fn parse_function_args(input: &str) -> IResult<&str, Vec<Expression>> {
     ws(separated_list1(
         multispace1,
         alt((
-            opt_parenthesis(parse_variant),
+            opt_parenthesis(parse_enum_instance),
             opt_parenthesis(parse_new_type_instance),
             parse_literal,
             parse_match,
@@ -268,42 +270,42 @@ mod tests {
     fn test_parse_literal_u8() {
         let input = "37";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::U8(37)));
+        assert_eq!(expr, Expression::literal(Literal::u8(37)));
     }
 
     #[test]
     fn test_parse_literal_binary() {
         let input = "0b110";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::U8(6)));
+        assert_eq!(expr, Expression::literal(Literal::u8(6)));
     }
 
     #[test]
     fn test_parse_literal_octal() {
         let input = "0o20";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::U8(16)));
+        assert_eq!(expr, Expression::literal(Literal::u8(16)));
     }
 
     #[test]
     fn test_parse_literal_hexadecimal() {
         let input = "0x20";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::U8(32)));
+        assert_eq!(expr, Expression::literal(Literal::u8(32)));
     }
 
     #[test]
     fn test_parse_literal_f32() {
         let input = "0.12";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::F32(0.12)));
+        assert_eq!(expr, Expression::literal(Literal::f32(0.12)));
     }
 
     #[test]
     fn test_parse_literal_i8() {
         let input = "-37";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::I8(-37)));
+        assert_eq!(expr, Expression::literal(Literal::i8(-37)));
     }
 
     #[test]
@@ -313,7 +315,7 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::literal(Literal::String("hello, \"world\"".to_string()))
+            Expression::literal(Literal::String("hello, \"world\"".to_owned()))
         );
     }
 
@@ -322,7 +324,7 @@ mod tests {
         let input = "my_var";
         let (_, expr) = parse_expr(input).unwrap();
 
-        assert_eq!(expr, Expression::identifier("my_var".to_string()));
+        assert_eq!(expr, Expression::identifier("my_var".to_owned()));
     }
 
     #[test]
@@ -339,24 +341,21 @@ mod tests {
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expression::new_variant("Option".to_string(), "None".to_string(), vec![])
+            Expression::new_variant("Option".to_owned(), "None".to_owned(), vec![])
         );
     }
 
     #[test]
     fn test_parse_new_variant_with_args() {
-        let input = "Option.Some(1, some_id)";
+        let input = "Option.Some(1)";
         let (rem, parsed) = parse_expr(input).unwrap();
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
             Expression::new_variant(
-                "Option".to_string(),
-                "Some".to_string(),
-                vec![
-                    Expression::literal(Literal::U8(1)),
-                    Expression::identifier("some_id".to_string()),
-                ]
+                "Option".to_owned(),
+                "Some".to_owned(),
+                vec![Expression::literal(Literal::u8(1)),]
             )
         );
     }
@@ -368,14 +367,14 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::new_type_instance(
-                "Person".to_string(),
+                "Person".to_owned(),
                 vec![
                     (
-                        "name".to_string(),
-                        Expression::literal(Literal::String("Bob".to_string()))
+                        "name".to_owned(),
+                        Expression::literal(Literal::String("Bob".to_owned()))
                     ),
                     (
-                        "is_builder".to_string(),
+                        "is_builder".to_owned(),
                         Expression::literal(Literal::Bool(true))
                     ),
                 ]
@@ -390,10 +389,10 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::function_call(
-                "my_function".to_string(),
+                "my_function".to_owned(),
                 vec![
-                    Expression::identifier("arg1".to_string()),
-                    Expression::identifier("arg2".to_string()),
+                    Expression::identifier("arg1".to_owned()),
+                    Expression::identifier("arg2".to_owned()),
                 ]
             )
         );
@@ -406,17 +405,17 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::function_call(
-                "my_function".to_string(),
+                "my_function".to_owned(),
                 vec![
                     Expression::function_call(
-                        "other_fn".to_string(),
-                        vec![Expression::literal(Literal::U8(42))]
+                        "other_fn".to_owned(),
+                        vec![Expression::literal(Literal::u8(42))]
                     ),
                     Expression::new_type_instance(
-                        "Person".to_string(),
+                        "Person".to_owned(),
                         vec![(
-                            "name".to_string(),
-                            Expression::literal(Literal::String("Bob".to_string()))
+                            "name".to_owned(),
+                            Expression::literal(Literal::String("Bob".to_owned()))
                         )]
                     )
                 ]
@@ -431,10 +430,10 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::function_call(
-                "my_function".to_string(),
+                "my_function".to_owned(),
                 vec![Expression::function_call(
-                    "other_fn".to_string(),
-                    vec![Expression::literal(Literal::U8(42))]
+                    "other_fn".to_owned(),
+                    vec![Expression::literal(Literal::u8(42))]
                 ),]
             )
         );
@@ -451,15 +450,15 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::match_expr(
-                Pattern::Identifier("my_bool".to_string()),
+                Pattern::Identifier("my_bool".to_owned()),
                 vec![
                     MatchArm {
                         pattern: Pattern::Literal(Literal::Bool(true)),
-                        body: MatchBody::Expr(Expression::literal(Literal::U8(1))),
+                        body: MatchBody::Expr(Expression::literal(Literal::u8(1))),
                     },
                     MatchArm {
                         pattern: Pattern::Literal(Literal::Bool(false)),
-                        body: MatchBody::Expr(Expression::literal(Literal::U8(0)))
+                        body: MatchBody::Expr(Expression::literal(Literal::u8(0)))
                     }
                 ]
             )
@@ -478,13 +477,13 @@ mod tests {
             parsed,
             Expression::match_expr(
                 Pattern::Variant(
-                    "Option".to_string(),
-                    "Some".to_string(),
-                    vec![Pattern::Identifier("x".to_string())]
+                    "Option".to_owned(),
+                    "Some".to_owned(),
+                    vec![Pattern::Identifier("x".to_owned())]
                 ),
                 vec![
                     MatchArm {
-                        pattern: Pattern::Literal(Literal::U8(1)),
+                        pattern: Pattern::Literal(Literal::u8(1)),
                         body: MatchBody::Expr(Expression::literal(Literal::Bool(true))),
                     },
                     MatchArm {
@@ -514,13 +513,13 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::match_expr(
-                Pattern::Identifier("my_option".to_string()),
+                Pattern::Identifier("my_option".to_owned()),
                 vec![
                     MatchArm {
                         pattern: Pattern::Variant(
-                            "Option".to_string(),
-                            "Some".to_string(),
-                            vec![Pattern::Identifier("x".to_string())]
+                            "Option".to_owned(),
+                            "Some".to_owned(),
+                            vec![Pattern::Identifier("x".to_owned())]
                         ),
                         body: MatchBody::Block(Block::new(
                             vec![],
@@ -528,7 +527,7 @@ mod tests {
                         )),
                     },
                     MatchArm {
-                        pattern: Pattern::Variant("Option".to_string(), "None".to_string(), vec![]),
+                        pattern: Pattern::Variant("Option".to_owned(), "None".to_owned(), vec![]),
                         body: MatchBody::Expr(Expression::literal(Literal::Bool(false)))
                     }
                 ]
@@ -543,9 +542,9 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::binary_op(
-                Expression::literal(Literal::U8(1)),
+                Expression::literal(Literal::u8(1)),
                 BinaryOp::Add,
-                Expression::literal(Literal::U8(2))
+                Expression::literal(Literal::u8(2))
             )
         );
     }

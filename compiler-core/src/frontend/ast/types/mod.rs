@@ -1,20 +1,48 @@
 pub mod compound;
 pub mod custom;
 pub mod function;
-pub mod primitive;
 
-pub use compound::CompoundType;
 pub use custom::CustomType;
 pub use function::FunctionSignature;
-pub use primitive::PrimitiveType;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    Primitive(PrimitiveType),
+    // Primitive types
+    I8,
+    I16,
+    I32,
+    I64,
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    Bool,
+    String,
+
     Custom(String, Vec<String>),
-    Compound(CompoundType),
     Function(FunctionSignature),
+
+    // Special types
     Unit,
-    /// Pending for type inference. Illegal
+    /// For type inference, illegal
     Pending,
+}
+
+impl From<&Type> for cranelift::prelude::Type {
+    fn from(value: &Type) -> Self {
+        use cranelift::prelude::types as T;
+        match value {
+            Type::I8 | Type::U8 => T::I8,
+            Type::I16 | Type::U16 => T::I16,
+            Type::I32 | Type::U32 => T::I32,
+            Type::I64 | Type::U64 | Type::Function(_) => T::I64,
+            Type::F32 => T::F32,
+            Type::F64 => T::F64,
+            Type::Bool => T::I8,
+            Type::Pending => panic!("Pending type cannot be converted to Cranelift type"),
+            _ => todo!(),
+        }
+    }
 }

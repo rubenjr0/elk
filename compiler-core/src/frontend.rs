@@ -1,8 +1,6 @@
 pub mod analysis;
 pub mod ast;
-mod inference;
 pub mod parser;
-mod translation;
 
 use ast::program::Program;
 
