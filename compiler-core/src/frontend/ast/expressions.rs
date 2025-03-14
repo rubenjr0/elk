@@ -1,7 +1,4 @@
-use super::{
-    statements::Block,
-    types::{PrimitiveType, Type},
-};
+use super::{statements::Block, types::Type};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
@@ -44,15 +41,8 @@ impl Expression {
         }
     }
 
-    pub const fn literal(literal: Literal) -> Self {
-        let associated_type = match literal {
-            Literal::I8(_) => Type::Primitive(PrimitiveType::I8),
-            Literal::U8(_) => Type::Primitive(PrimitiveType::U8),
-            Literal::F32(_) => Type::Primitive(PrimitiveType::F32),
-            Literal::F64(_) => Type::Primitive(PrimitiveType::F64),
-            Literal::Bool(_) => Type::Primitive(PrimitiveType::Bool),
-            Literal::String(_) => Type::Primitive(PrimitiveType::String),
-        };
+    pub fn literal(literal: Literal) -> Self {
+        let associated_type = literal.get_type();
         Self {
             kind: ExpressionKind::Literal(literal),
             associated_type,
@@ -112,12 +102,41 @@ impl Expression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
-    I8(i8),
-    U8(u8),
-    F32(f32),
-    F64(f64),
+    Integer(u64, Type),
+    Float(f64, Type),
     Bool(bool),
     String(String),
+}
+
+impl Literal {
+    pub fn get_type(&self) -> Type {
+        match self {
+            Literal::Integer(_, ty) => ty.clone(),
+            Literal::Float(_, ty) => ty.clone(),
+            Literal::Bool(_) => Type::Bool,
+            Literal::String(_) => Type::String,
+        }
+    }
+
+    pub fn i8(val: i8) -> Self {
+        Self::Integer(val as u64, Type::I8)
+    }
+
+    pub fn u8(val: u8) -> Self {
+        Self::Integer(val as u64, Type::U8)
+    }
+
+    pub fn i32(val: i32) -> Self {
+        Self::Integer(val as u64, Type::I32)
+    }
+
+    pub fn u32(val: u32) -> Self {
+        Self::Integer(val as u64, Type::U32)
+    }
+
+    pub fn f32(val: f32) -> Self {
+        Self::Float(val as f64, Type::F32)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

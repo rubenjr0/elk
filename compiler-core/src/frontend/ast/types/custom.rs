@@ -26,7 +26,7 @@ pub struct Variant {
 impl CustomType {
     pub fn new(name: &str, content: CustomTypeContent, generics: Vec<String>) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             content,
             generics,
         }
@@ -44,7 +44,7 @@ impl CustomType {
 impl Variant {
     pub fn new(name: &str, types: Vec<Type>) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             types,
         }
     }

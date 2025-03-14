@@ -1,7 +1,7 @@
 use super::{expressions::Expression, statements::Block, types::FunctionSignature};
 
 #[derive(Debug, Clone)]
-pub struct FunctionDefinition {
+pub struct FunctionDeclaration {
     name: String,
     signature: FunctionSignature,
 }
@@ -19,10 +19,10 @@ pub enum FunctionBody {
     MultiLine(Block),
 }
 
-impl FunctionDefinition {
+impl FunctionDeclaration {
     pub fn new(name: &str, signature: FunctionSignature) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             signature,
         }
     }
@@ -39,7 +39,7 @@ impl FunctionDefinition {
 impl FunctionImplementation {
     pub fn new(name: &str, arguments: Vec<String>, body: FunctionBody) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             arguments,
             body,
         }

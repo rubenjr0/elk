@@ -43,7 +43,7 @@ fn parse_assign_statement(input: &str) -> IResult<&str, Statement> {
     let (input, identifier) = parse_identifier_lower(input)?;
     let (input, _) = ws(tag("=")).parse(input)?;
     let (input, expr) = parse_expr(input)?;
-    Ok((input, Statement::Assignment(identifier.to_string(), expr)))
+    Ok((input, Statement::Assignment(identifier.to_owned(), expr)))
 }
 
 fn parse_return_statement(input: &str) -> IResult<&str, Statement> {
@@ -70,7 +70,7 @@ mod tests {
 
         assert_eq!(
             statement,
-            Statement::Assignment("_z".to_string(), Expression::literal(Literal::U8(1)))
+            Statement::Assignment("_z".to_owned(), Expression::literal(Literal::u8(1)))
         );
     }
 
@@ -81,7 +81,7 @@ mod tests {
 
         assert_eq!(
             statement,
-            Statement::Return(Expression::literal(Literal::U8(1)))
+            Statement::Return(Expression::literal(Literal::u8(1)))
         );
     }
 
@@ -94,10 +94,10 @@ mod tests {
             block,
             Block::new(
                 vec![Statement::Assignment(
-                    "_z".to_string(),
-                    Expression::literal(Literal::U8(1))
+                    "_z".to_owned(),
+                    Expression::literal(Literal::u8(1))
                 ),],
-                Expression::identifier("_z".to_string())
+                Expression::identifier("_z".to_owned())
             )
         );
     }
@@ -111,8 +111,8 @@ mod tests {
             block,
             Block::new(
                 vec![Statement::Assignment(
-                    "_z".to_string(),
-                    Expression::literal(Literal::U8(1))
+                    "_z".to_owned(),
+                    Expression::literal(Literal::u8(1))
                 ),],
                 Expression::unit()
             )

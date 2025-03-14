@@ -12,7 +12,7 @@ pub enum Statement {
 /// Blocks contain statements and return an expression.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
     pub return_expr: Expression,
 }
 

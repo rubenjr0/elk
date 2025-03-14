@@ -1,12 +1,12 @@
 use super::{
-    functions::{FunctionDefinition, FunctionImplementation},
+    functions::{FunctionDeclaration, FunctionImplementation},
     statements::Block,
     types::CustomType,
 };
 
 #[derive(Debug)]
 pub enum TopLevel {
-    FunctionDefinition(FunctionDefinition),
+    FunctionDefinition(FunctionDeclaration),
     FunctionImplementation(FunctionImplementation),
     CustomType(CustomType),
     EntryPoint(Block),

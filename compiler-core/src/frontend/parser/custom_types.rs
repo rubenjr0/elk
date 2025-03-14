@@ -83,13 +83,13 @@ fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
     let (remaining, name) = parse_identifier_lower(input)?;
     let (remaining, _) = ws(tag(":")).parse(remaining)?;
     let (remaining, ty) = parse_type(remaining)?;
-    Ok((remaining, (name.to_string(), ty)))
+    Ok((remaining, (name.to_owned(), ty)))
 }
 
 #[cfg(test)]
 mod tests {
     use crate::frontend::ast::types::custom::{CustomTypeContent, Variant};
-    use crate::frontend::ast::types::{PrimitiveType, Type};
+    use crate::frontend::ast::types::Type;
 
     #[test]
     fn test_parse_empty_custom_type() {
@@ -118,7 +118,7 @@ mod tests {
         assert_eq!(
             parsed.content(),
             &CustomTypeContent::Enum(vec![
-                Variant::new("Some", vec![Type::Custom("T".to_string(), vec![])]),
+                Variant::new("Some", vec![Type::Custom("T".to_owned(), vec![])]),
                 Variant::named("None"),
             ])
         );
@@ -132,8 +132,8 @@ mod tests {
         assert_eq!(
             parsed.content(),
             &CustomTypeContent::Record(vec![
-                ("admin".to_string(), Type::Primitive(PrimitiveType::Bool)),
-                ("age".to_string(), Type::Primitive(PrimitiveType::U8)),
+                ("admin".to_owned(), Type::Bool),
+                ("age".to_owned(), Type::U8),
             ])
         );
     }
@@ -165,7 +165,7 @@ mod tests {
         let input = "VariantA(U8)";
         let (_, parsed) = super::parse_variant(input).unwrap();
         assert_eq!(parsed.name(), "VariantA");
-        assert_eq!(parsed.types(), &vec![Type::Primitive(PrimitiveType::U8)]);
+        assert_eq!(parsed.types(), &vec![Type::U8]);
     }
 
     #[test]
@@ -187,6 +187,6 @@ mod tests {
         let input = "admin: Bool";
         let (_, parsed) = super::parse_field(input).unwrap();
         assert_eq!(parsed.0, "admin");
-        assert_eq!(parsed.1, Type::Primitive(PrimitiveType::Bool));
+        assert_eq!(parsed.1, Type::Bool);
     }
 }
