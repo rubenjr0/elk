@@ -13,7 +13,6 @@ pub fn compile_to_object(source: &str) -> Vec<u8> {
     let mut inference = TypeInference::default();
     inference.infer_program(&mut program);
 
-    let mut codegen = Codegen::default();
-    codegen.compile_program_to_object(&program);
-    codegen.module.finish().emit().unwrap()
+    let codegen = Codegen::default();
+    codegen.compile_program_to_object(&program)
 }

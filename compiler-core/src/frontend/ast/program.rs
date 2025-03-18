@@ -15,20 +15,6 @@ pub struct Program {
 }
 
 impl Program {
-    pub const fn new(
-        type_definitions: Vec<CustomType>,
-        function_declarations: Vec<FunctionDeclaration>,
-        function_implementations: Vec<FunctionImplementation>,
-        entry_point: Block,
-    ) -> Self {
-        Self {
-            function_declarations,
-            function_implementations,
-            type_definitions,
-            entry_point,
-        }
-    }
-
     pub fn from_top_levels(top_levels: Vec<TopLevel>) -> Self {
         let mut function_declarations: Vec<FunctionDeclaration> = vec![];
         let mut function_implementations: Vec<FunctionImplementation> = vec![];

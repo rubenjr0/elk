@@ -1,16 +1,7 @@
-use std::collections::BTreeMap;
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
-use cranelift::{
-    codegen::{
-        ir::{Function, UserFuncName},
-        Context,
-    },
-    prelude::{
-        types, AbiParam, Configurable, FunctionBuilder, FunctionBuilderContext, Signature, Type,
-        Variable,
-    },
-};
-use cranelift_module::{FuncId, Module};
+use cranelift::prelude::{settings::Flags, Configurable, Signature, Type, Variable};
+use cranelift_module::FuncId;
 use cranelift_object::{ObjectBuilder, ObjectModule};
 
 use crate::frontend::ast::{
@@ -24,10 +15,12 @@ mod functions;
 pub mod inference;
 mod statements;
 
+#[derive(Clone)]
 pub struct Codegen {
     variables: BTreeMap<String, (Type, Variable)>,
-    functions: BTreeMap<String, (FuncId, Signature, Vec<Type>)>,
-    pub module: ObjectModule,
+    functions: BTreeMap<String, (u32, FuncId, Signature, Vec<Type>)>,
+    pub module: Rc<RefCell<ObjectModule>>,
+    flags: Flags,
 }
 
 impl Default for Codegen {
@@ -37,14 +30,19 @@ impl Default for Codegen {
         flags_builder.set("is_pic", "false").unwrap();
         flags_builder.set("enable_probestack", "false").unwrap();
         let flags = cranelift::prelude::settings::Flags::new(flags_builder);
-        let isa = cranelift_native::builder().unwrap().finish(flags).unwrap();
+        let isa = cranelift_native::builder()
+            .unwrap()
+            .finish(flags.clone())
+            .unwrap();
         let module_builder =
             ObjectBuilder::new(isa, "main", cranelift_module::default_libcall_names()).unwrap();
         let module = ObjectModule::new(module_builder);
+        let module = Rc::new(RefCell::new(module));
         Self {
             variables: BTreeMap::new(),
             functions: BTreeMap::new(),
             module,
+            flags,
         }
     }
 }
@@ -67,31 +65,21 @@ impl Codegen {
     }
 
     fn compile_entrypoint(&mut self, entry_point: &Block) {
-        let mut main_sig = Signature::new(cranelift::prelude::isa::CallConv::SystemV);
-        main_sig.returns.push(AbiParam::new(types::I8));
+        self.gen_function_declaration(&FunctionDeclaration::main());
 
-        let main_id = self
-            .module
-            .declare_function("main", cranelift_module::Linkage::Export, &main_sig)
-            .unwrap();
-
-        let mut func = Function::with_name_signature(UserFuncName::user(0, 0), main_sig);
-        let mut func_ctx = FunctionBuilderContext::new();
-        let mut fn_builder = FunctionBuilder::new(&mut func, &mut func_ctx);
-
-        self.gen_block(entry_point, &mut fn_builder);
-        fn_builder.finalize();
-
-        eprintln!("IR:\n{}", func);
-
-        let mut context = Context::for_function(func);
-        self.module.define_function(main_id, &mut context).unwrap();
+        self.gen_function_implementation(&FunctionImplementation::main(entry_point));
     }
 
-    pub fn compile_program_to_object(&mut self, program: &Program) {
+    pub fn compile_program_to_object(mut self, program: &Program) -> Vec<u8> {
         self.compile_function_declarations(&program.function_declarations);
         self.compile_function_implementations(&program.function_implementations);
         self.compile_entrypoint(&program.entry_point);
+        Rc::into_inner(self.module)
+            .unwrap()
+            .into_inner()
+            .finish()
+            .emit()
+            .unwrap()
     }
 }
 

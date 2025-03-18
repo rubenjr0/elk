@@ -1,9 +1,9 @@
 use cranelift::{
     codegen::{
         ir::{Function, UserFuncName},
-        Context,
+        verify_function, Context,
     },
-    prelude::{FunctionBuilder, FunctionBuilderContext, InstBuilder},
+    prelude::{settings::FlagsOrIsa, FunctionBuilder, FunctionBuilderContext, InstBuilder},
 };
 use cranelift_module::Module;
 
@@ -13,13 +13,14 @@ use super::Codegen;
 
 impl Codegen {
     pub fn gen_function_declaration(&mut self, function_declaration: &FunctionDeclaration) {
-        let sig = function_declaration.signature().into();
+        let sig = function_declaration.signature().to_cranelift();
 
         let func_id = self
             .module
+            .borrow_mut()
             .declare_function(
                 function_declaration.name(),
-                cranelift_module::Linkage::Local,
+                cranelift_module::Linkage::Export,
                 &sig,
             )
             .unwrap();
@@ -27,13 +28,14 @@ impl Codegen {
         self.functions.insert(
             function_declaration.name().to_owned(),
             (
+                self.functions.len() as u32,
                 func_id,
                 sig,
                 function_declaration
                     .signature()
                     .arguments()
                     .iter()
-                    .map(|arg| arg.into())
+                    .map(|arg| arg.to_cranelift())
                     .collect(),
             ),
         );
@@ -43,11 +45,11 @@ impl Codegen {
         &mut self,
         function_implementation: &FunctionImplementation,
     ) {
-        let mut gen = Codegen::default();
+        let mut gen = self.clone();
 
-        let (fid, sig, typ) = self.functions.get(function_implementation.name()).unwrap();
+        let (idx, fid, sig, typ) = self.functions.get(function_implementation.name()).unwrap();
 
-        let mut func = Function::with_name_signature(UserFuncName::user(0, 0), sig.clone());
+        let mut func = Function::with_name_signature(UserFuncName::user(0, *idx), sig.clone());
 
         let mut func_ctx = FunctionBuilderContext::new();
         let mut builder = FunctionBuilder::new(&mut func, &mut func_ctx);
@@ -63,26 +65,40 @@ impl Codegen {
             .zip(typ)
             .enumerate()
             .for_each(|(i, (var_name, ty))| {
-                let var = gen.new_variable(&var_name, ty.clone());
-                builder.declare_var(var, ty.clone());
+                let var = gen.new_variable(var_name, *ty);
+                builder.declare_var(var, *ty);
                 let tmp = builder.block_params(entry_block)[i];
                 builder.def_var(var, tmp);
             });
 
-        match function_implementation.body() {
+        let val = match function_implementation.body() {
             crate::frontend::ast::functions::FunctionBody::SingleLine(expression) => {
-                let ret = gen.gen_expression(expression, &mut builder);
-                builder.ins().return_(&[ret]);
+                gen.gen_expression(expression, &mut builder)
             }
             crate::frontend::ast::functions::FunctionBody::MultiLine(block) => {
-                gen.gen_block(block, &mut builder);
+                gen.gen_block(block, &mut builder)
             }
         };
 
+        builder.ins().return_(&[val]);
+
         builder.finalize();
+        verify_function(
+            &func,
+            FlagsOrIsa {
+                flags: &self.flags,
+                isa: None,
+            },
+        )
+        .unwrap();
+
+        eprintln!("{func}");
 
         let mut ctx = Context::for_function(func);
 
-        self.module.define_function(*fid, &mut ctx).unwrap();
+        self.module
+            .borrow_mut()
+            .define_function(*fid, &mut ctx)
+            .unwrap();
     }
 }

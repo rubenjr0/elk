@@ -27,6 +27,13 @@ impl FunctionDeclaration {
         }
     }
 
+    pub fn main() -> Self {
+        Self {
+            name: "main".to_owned(),
+            signature: FunctionSignature::new(vec![], super::types::Type::I8),
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -41,6 +48,15 @@ impl FunctionImplementation {
         Self {
             name: name.to_owned(),
             arguments,
+            body,
+        }
+    }
+
+    pub fn main(block: &Block) -> Self {
+        let body = FunctionBody::MultiLine(block.clone());
+        Self {
+            name: "main".to_owned(),
+            arguments: vec![],
             body,
         }
     }

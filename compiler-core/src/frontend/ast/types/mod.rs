@@ -30,10 +30,10 @@ pub enum Type {
     Pending,
 }
 
-impl From<&Type> for cranelift::prelude::Type {
-    fn from(value: &Type) -> Self {
+impl Type {
+    pub fn to_cranelift(&self) -> cranelift::prelude::Type {
         use cranelift::prelude::types as T;
-        match value {
+        match self {
             Type::I8 | Type::U8 => T::I8,
             Type::I16 | Type::U16 => T::I16,
             Type::I32 | Type::U32 => T::I32,

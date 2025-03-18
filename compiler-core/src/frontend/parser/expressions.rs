@@ -9,7 +9,7 @@ use nom::{
 };
 
 use crate::frontend::ast::expressions::{
-    BinaryOp, Expression, Literal, MatchArm, MatchBody, Pattern, UnaryOp,
+    BinaryOp, Expression, Literal, MatchArm, MatchBody, UnaryOp,
 };
 
 use super::{
@@ -94,7 +94,7 @@ fn parse_enum_instance(input: &str) -> IResult<&str, Expression> {
 
     Ok((
         input,
-        Expression::new_variant(ty.to_owned(), variant.to_owned(), args),
+        Expression::new_enum_instance(ty.to_owned(), variant.to_owned(), args),
     ))
 }
 
@@ -113,7 +113,10 @@ fn parse_new_type_instance(input: &str) -> IResult<&str, Expression> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, fields) = parse_fields(input)?;
 
-    Ok((input, Expression::new_type_instance(ty.to_owned(), fields)))
+    Ok((
+        input,
+        Expression::new_record_instance(ty.to_owned(), fields),
+    ))
 }
 
 fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expression)>> {
@@ -140,7 +143,7 @@ fn parse_field_access(input: &str) -> IResult<&str, Expression> {
         separated_pair(parse_identifier_lower, tag("."), parse_identifier_lower).parse(input)?;
     Ok((
         input,
-        Expression::field_access(parsed.0.to_owned(), parsed.1.to_owned()),
+        Expression::record_access(parsed.0.to_owned(), parsed.1.to_owned()),
     ))
 }
 
@@ -177,7 +180,7 @@ fn parse_function_args(input: &str) -> IResult<&str, Vec<Expression>> {
 
 fn parse_match(input: &str) -> IResult<&str, Expression> {
     let (input, _) = tag("match").parse(input)?;
-    let (input, pat) = parse_pattern(input)?;
+    let (input, pat) = parse_expr(input)?;
     let (input, _) = ws(tag("{")).parse(input)?;
     let (input, cases) = separated_list0(ws(tag(",")), parse_match_arm).parse(input)?;
     let (input, _) = ws(tag("}")).parse(input)?;
@@ -185,18 +188,12 @@ fn parse_match(input: &str) -> IResult<&str, Expression> {
     Ok((input, Expression::match_expr(pat, cases)))
 }
 
-fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
-    let (input, expr) = parse_expr(input)?;
-    let pat = Pattern::try_from(expr).expect("Invalid pattern");
-    Ok((input, pat))
-}
-
 fn parse_match_arm(input: &str) -> IResult<&str, MatchArm> {
-    let (input, pattern) = parse_pattern(input)?;
+    let (input, pattern) = parse_expr(input)?;
     let (input, _) = ws(tag("->")).parse(input)?;
     let (input, body) = parse_match_body(input)?;
 
-    Ok((input, MatchArm { pattern, body }))
+    Ok((input, MatchArm::new(pattern, body)))
 }
 
 fn parse_match_body(input: &str) -> IResult<&str, MatchBody> {
@@ -336,23 +333,23 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_new_variant() {
+    fn test_parse_new_enum_instance() {
         let input = "Option.None";
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expression::new_variant("Option".to_owned(), "None".to_owned(), vec![])
+            Expression::new_enum_instance("Option".to_owned(), "None".to_owned(), vec![])
         );
     }
 
     #[test]
-    fn test_parse_new_variant_with_args() {
+    fn test_parse_new_enum_instance_with_args() {
         let input = "Option.Some(1)";
         let (rem, parsed) = parse_expr(input).unwrap();
         assert!(rem.is_empty());
         assert_eq!(
             parsed,
-            Expression::new_variant(
+            Expression::new_enum_instance(
                 "Option".to_owned(),
                 "Some".to_owned(),
                 vec![Expression::literal(Literal::u8(1)),]
@@ -361,12 +358,12 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_new_type_instance_with_fields() {
+    fn test_parse_new_record_instance_with_fields() {
         let input = "Person { name = \"Bob\", is_builder = True }";
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
-            Expression::new_type_instance(
+            Expression::new_record_instance(
                 "Person".to_owned(),
                 vec![
                     (
@@ -411,7 +408,7 @@ mod tests {
                         "other_fn".to_owned(),
                         vec![Expression::literal(Literal::u8(42))]
                     ),
-                    Expression::new_type_instance(
+                    Expression::new_record_instance(
                         "Person".to_owned(),
                         vec![(
                             "name".to_owned(),
@@ -450,14 +447,14 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::match_expr(
-                Pattern::Identifier("my_bool".to_owned()),
+                Expression::identifier("my_bool".to_owned()),
                 vec![
                     MatchArm {
-                        pattern: Pattern::Literal(Literal::Bool(true)),
+                        pattern: Expression::literal(Literal::Bool(true)),
                         body: MatchBody::Expr(Expression::literal(Literal::u8(1))),
                     },
                     MatchArm {
-                        pattern: Pattern::Literal(Literal::Bool(false)),
+                        pattern: Expression::literal(Literal::Bool(false)),
                         body: MatchBody::Expr(Expression::literal(Literal::u8(0)))
                     }
                 ]
@@ -476,18 +473,18 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::match_expr(
-                Pattern::Variant(
+                Expression::new_enum_instance(
                     "Option".to_owned(),
                     "Some".to_owned(),
-                    vec![Pattern::Identifier("x".to_owned())]
+                    vec![Expression::identifier("x".to_owned())]
                 ),
                 vec![
                     MatchArm {
-                        pattern: Pattern::Literal(Literal::u8(1)),
+                        pattern: Expression::literal(Literal::u8(1)),
                         body: MatchBody::Expr(Expression::literal(Literal::Bool(true))),
                     },
                     MatchArm {
-                        pattern: Pattern::Wildcard,
+                        pattern: Expression::identifier("_".to_owned()),
                         body: MatchBody::Expr(Expression::literal(Literal::Bool(false)))
                     }
                 ]
@@ -513,13 +510,13 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::match_expr(
-                Pattern::Identifier("my_option".to_owned()),
+                Expression::identifier("my_option".to_owned()),
                 vec![
                     MatchArm {
-                        pattern: Pattern::Variant(
+                        pattern: Expression::new_enum_instance(
                             "Option".to_owned(),
                             "Some".to_owned(),
-                            vec![Pattern::Identifier("x".to_owned())]
+                            vec![Expression::identifier("x".to_owned())]
                         ),
                         body: MatchBody::Block(Block::new(
                             vec![],
@@ -527,7 +524,11 @@ mod tests {
                         )),
                     },
                     MatchArm {
-                        pattern: Pattern::Variant("Option".to_owned(), "None".to_owned(), vec![]),
+                        pattern: Expression::new_enum_instance(
+                            "Option".to_owned(),
+                            "None".to_owned(),
+                            vec![]
+                        ),
                         body: MatchBody::Expr(Expression::literal(Literal::Bool(false)))
                     }
                 ]
