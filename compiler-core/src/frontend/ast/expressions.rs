@@ -12,15 +12,15 @@ pub struct Expression {
 pub enum ExpressionKind {
     Identifier(String),
     Literal(Literal),
-    NewVariant(String, String, Vec<Expression>),
+    NewEnumInstance(String, String, Vec<Expression>),
     /// Expression for creating a new instance of a type with fields.
     /// Example: `MyType { field1 =  1, field2 = 2 };`
-    NewTypeInstance(String, Vec<(String, Expression)>),
+    NewRecordInstance(String, Vec<(String, Expression)>),
     /// Identifier, Field
     /// Example: `my_val.my_field`
-    FieldAccess(String, String),
+    RecordAccess(String, String),
     FunctionCall(String, Vec<Expression>),
-    Match(Pattern, Vec<MatchArm>),
+    Match(Box<Expression>, Vec<MatchArm>),
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     UnaryOp(UnaryOp, Box<Expression>),
     Unit,
@@ -49,24 +49,24 @@ impl Expression {
         }
     }
 
-    pub fn new_variant(type_name: String, variant_name: String, fields: Vec<Self>) -> Self {
+    pub fn new_enum_instance(enum_name: String, variant_name: String, fields: Vec<Self>) -> Self {
         Self {
-            kind: ExpressionKind::NewVariant(type_name.clone(), variant_name, fields),
-            associated_type: Type::Custom(type_name, vec![]),
+            kind: ExpressionKind::NewEnumInstance(enum_name.to_owned(), variant_name, fields),
+            associated_type: Type::Custom(enum_name, vec![]),
         }
     }
 
-    pub fn new_type_instance(type_name: String, fields: Vec<(String, Self)>) -> Self {
-        let associated_type = Type::Custom(type_name.clone(), vec![]);
+    pub fn new_record_instance(record_name: String, fields: Vec<(String, Self)>) -> Self {
+        let associated_type = Type::Custom(record_name.clone(), vec![]);
         Self {
-            kind: ExpressionKind::NewTypeInstance(type_name, fields),
+            kind: ExpressionKind::NewRecordInstance(record_name, fields),
             associated_type,
         }
     }
 
-    pub const fn field_access(type_name: String, field_name: String) -> Self {
+    pub const fn record_access(record_name: String, field_name: String) -> Self {
         Self {
-            kind: ExpressionKind::FieldAccess(type_name, field_name),
+            kind: ExpressionKind::RecordAccess(record_name, field_name),
             associated_type: Type::Pending,
         }
     }
@@ -78,9 +78,9 @@ impl Expression {
         }
     }
 
-    pub const fn match_expr(pattern: Pattern, arms: Vec<MatchArm>) -> Self {
+    pub fn match_expr(expr: Expression, arms: Vec<MatchArm>) -> Self {
         Self {
-            kind: ExpressionKind::Match(pattern, arms),
+            kind: ExpressionKind::Match(Box::new(expr), arms),
             associated_type: Type::Pending,
         }
     }
@@ -148,6 +148,7 @@ pub enum BinaryOp {
     Mod,
     And,
     Or,
+    Xor,
     Eq,
     NotEq,
     Less,
@@ -164,7 +165,7 @@ pub enum UnaryOp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
-    pub pattern: Pattern,
+    pub pattern: Expression,
     pub body: MatchBody,
 }
 
@@ -174,42 +175,14 @@ pub enum MatchBody {
     Expr(Expression),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Pattern {
-    Literal(Literal),
-    Identifier(String),
-    /// Type, Variant, Fields
-    Variant(String, String, Vec<Pattern>),
-    /// Identifier, Field
-    /// Example: `my_val.my_field`
-    Field(String, String),
-    Tuple(Vec<Pattern>),
-    Wildcard,
-}
-
-impl TryFrom<Expression> for Pattern {
-    type Error = &'static str;
-
-    fn try_from(value: Expression) -> Result<Self, Self::Error> {
-        match value.kind {
-            ExpressionKind::Identifier(s) if s == "_" => Ok(Self::Wildcard),
-            ExpressionKind::Identifier(s) => Ok(Self::Identifier(s)),
-            ExpressionKind::Literal(literal) => Ok(Self::Literal(literal)),
-            ExpressionKind::NewVariant(type_name, variant_name, patterns) => {
-                let patterns = patterns
-                    .into_iter()
-                    .map(Self::try_from)
-                    .collect::<Result<Vec<Self>, _>>()
-                    .expect("Failed to convert field to pattern");
-                Ok(Self::Variant(type_name, variant_name, patterns))
-            }
-            ExpressionKind::FieldAccess(ty, fd) => Ok(Self::Field(ty, fd)),
-            ExpressionKind::NewTypeInstance(_, _) => {
-                Err("Cannot convert NewTypeInstance to Pattern")
-            }
-            ExpressionKind::FunctionCall(_, _) => Err("Cannot convert FunctionCall to Pattern"),
-            ExpressionKind::Match(_, _) => Err("Cannot convert Match to Pattern"),
-            _ => Err("Cannot convert Expr to Pattern"),
-        }
+impl MatchArm {
+    pub fn new(pattern: Expression, body: MatchBody) -> Self {
+        match pattern.kind {
+            ExpressionKind::Identifier(_)
+            | ExpressionKind::Literal(_)
+            | ExpressionKind::NewEnumInstance(_, _, _) => (),
+            _ => panic!(),
+        };
+        Self { pattern, body }
     }
 }

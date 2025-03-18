@@ -25,14 +25,14 @@ impl FunctionSignature {
     }
 }
 
-impl From<&FunctionSignature> for cranelift::prelude::Signature {
-    fn from(value: &FunctionSignature) -> Self {
-        let params: Vec<_> = value
+impl FunctionSignature {
+    pub fn to_cranelift(&self) -> cranelift::prelude::Signature {
+        let params: Vec<_> = self
             .arguments()
             .iter()
-            .map(|arg| AbiParam::new(arg.into()))
+            .map(|arg| AbiParam::new(arg.to_cranelift()))
             .collect();
-        let returns = AbiParam::new(value.return_type().into());
+        let returns = AbiParam::new(self.return_type().to_cranelift());
         Signature {
             params,
             returns: vec![returns],

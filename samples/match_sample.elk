@@ -1,0 +1,7 @@
+main {
+    x = True;
+    match x {
+        True -> 0,
+        False -> 1
+    }
+}
