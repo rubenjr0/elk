@@ -3,7 +3,7 @@ use super::{statements::Block, types::Type};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
     pub kind: ExpressionKind,
-    pub associated_type: Type,
+    pub associated_type: Option<Type>,
 }
 
 /// Expr is the base of the AST.
@@ -27,17 +27,21 @@ pub enum ExpressionKind {
 }
 
 impl Expression {
+    pub fn associated_type(&self) -> Option<&Type> {
+        self.associated_type.as_ref()
+    }
+
     pub const fn unit() -> Self {
         Self {
             kind: ExpressionKind::Unit,
-            associated_type: Type::Unit,
+            associated_type: Some(Type::Unit),
         }
     }
 
     pub const fn identifier(identifier: String) -> Self {
         Self {
             kind: ExpressionKind::Identifier(identifier),
-            associated_type: Type::Pending,
+            associated_type: None,
         }
     }
 
@@ -45,14 +49,14 @@ impl Expression {
         let associated_type = literal.get_type();
         Self {
             kind: ExpressionKind::Literal(literal),
-            associated_type,
+            associated_type: Some(associated_type),
         }
     }
 
     pub fn new_enum_instance(enum_name: String, variant_name: String, fields: Vec<Self>) -> Self {
         Self {
             kind: ExpressionKind::NewEnumInstance(enum_name.to_owned(), variant_name, fields),
-            associated_type: Type::Custom(enum_name, vec![]),
+            associated_type: Some(Type::Custom(enum_name, vec![])),
         }
     }
 
@@ -60,42 +64,42 @@ impl Expression {
         let associated_type = Type::Custom(record_name.clone(), vec![]);
         Self {
             kind: ExpressionKind::NewRecordInstance(record_name, fields),
-            associated_type,
+            associated_type: Some(associated_type),
         }
     }
 
     pub const fn record_access(record_name: String, field_name: String) -> Self {
         Self {
             kind: ExpressionKind::RecordAccess(record_name, field_name),
-            associated_type: Type::Pending,
+            associated_type: None,
         }
     }
 
     pub const fn function_call(name: String, args: Vec<Self>) -> Self {
         Self {
             kind: ExpressionKind::FunctionCall(name, args),
-            associated_type: Type::Pending,
+            associated_type: None,
         }
     }
 
     pub fn match_expr(expr: Expression, arms: Vec<MatchArm>) -> Self {
         Self {
             kind: ExpressionKind::Match(Box::new(expr), arms),
-            associated_type: Type::Pending,
+            associated_type: None,
         }
     }
 
     pub fn binary_op(lhs: Self, op: BinaryOp, rhs: Self) -> Self {
         Self {
             kind: ExpressionKind::BinaryOp(Box::new(lhs), op, Box::new(rhs)),
-            associated_type: Type::Pending,
+            associated_type: None,
         }
     }
 
     pub fn unary_op(op: UnaryOp, expr: Self) -> Self {
         Self {
             kind: ExpressionKind::UnaryOp(op, Box::new(expr)),
-            associated_type: Type::Pending,
+            associated_type: None,
         }
     }
 }

@@ -18,7 +18,7 @@ impl Codegen {
         match &expression.kind {
             ExpressionKind::Literal(literal) => gen_literal(literal, builder),
             ExpressionKind::Identifier(var_name) => {
-                let (_, var) = self.get_variable(var_name).unwrap();
+                let (var, _) = self.get_variable(var_name).unwrap();
                 builder.use_var(*var)
             }
             ExpressionKind::BinaryOp(lhs, op, rhs) => self.gen_binary_op(lhs, rhs, op, builder),
@@ -26,6 +26,8 @@ impl Codegen {
                 self.gen_function_call(function_name, args, builder)
             }
             ExpressionKind::Unit => builder.ins().iconst(types::I32, 0),
+            ExpressionKind::NewRecordInstance(a, b) => self.gen_new_record_instance(a, b, builder),
+            ExpressionKind::RecordAccess(a, b) => self.gen_record_access(a, b, builder),
             _ => todo!(),
         }
     }
@@ -68,6 +70,24 @@ impl Codegen {
         let i = builder.ins().call(fref, &args);
         let val = builder.inst_results(i)[0];
         val
+    }
+
+    fn gen_new_record_instance(
+        &mut self,
+        record_name: &str,
+        fields: &[(String, Expression)],
+        builder: &mut FunctionBuilder,
+    ) -> Value {
+        todo!()
+    }
+
+    fn gen_record_access(
+        &mut self,
+        record_name: &str,
+        field_name: &str,
+        builder: &mut FunctionBuilder,
+    ) -> Value {
+        todo!()
     }
 }
 
