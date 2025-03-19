@@ -12,7 +12,10 @@ impl Codegen {
         for stmt in block.statements() {
             match stmt {
                 crate::frontend::ast::statements::Statement::Assignment(var_name, expression) => {
-                    let ty = expression.associated_type.to_cranelift();
+                    let ty = expression
+                        .associated_type()
+                        .expect("Type not inferred")
+                        .to_cranelift();
                     let var = self.declare_variable(var_name, ty);
                     let val = self.gen_expression(expression, builder);
                     builder.declare_var(var, ty);

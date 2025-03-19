@@ -3,7 +3,7 @@ use nom::{
     bytes::complete::tag,
     combinator::{map, opt},
     multi::{separated_list0, separated_list1},
-    sequence::delimited,
+    sequence::{delimited, terminated},
     IResult, Parser,
 };
 
@@ -23,9 +23,13 @@ pub fn parse_custom_type(input: &str) -> IResult<&str, CustomType> {
     let (input, _) = ws(tag("type")).parse(input)?;
     let (input, name) = ws(parse_identifier_upper).parse(input)?;
     let (input, generics) = parse_custom_type_generics(input)?;
-    let (input, content) =
-        delimited(ws(tag("{")), parse_custom_type_contents, ws(tag("}"))).parse(input)?;
-
+    let (input, content) = delimited(
+        ws(tag("{")),
+        terminated(parse_custom_type_contents, opt(ws(tag(",")))),
+        ws(tag("}")),
+    )
+    .or(|a| Ok((a, CustomTypeContent::Empty)))
+    .parse(input)?;
     Ok((input, CustomType::new(name, content, generics)))
 }
 
@@ -40,16 +44,11 @@ pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
 }
 
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
-    if let Ok((remaining, contents)) = alt((
+    alt((
         map(parse_variants, CustomTypeContent::Enum),
         map(parse_fields, CustomTypeContent::Record),
     ))
     .parse(input)
-    {
-        Ok((remaining, contents))
-    } else {
-        Ok((input, CustomTypeContent::Empty))
-    }
 }
 
 fn parse_variants(input: &str) -> IResult<&str, Vec<Variant>> {
@@ -93,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_parse_empty_custom_type() {
-        let input = "type Phantom {}";
+        let input = "type Phantom";
         let (_, parsed) = super::parse_custom_type(input).unwrap();
         assert_eq!(parsed.name(), "Phantom");
         assert_eq!(parsed.content(), &CustomTypeContent::Empty);
@@ -101,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_parse_custom_type_variants() {
-        let input = "type CustomType { VariantA, VariantB }";
+        let input = "type CustomType { VariantA, VariantB, }";
         let (_, parsed) = super::parse_custom_type(input).unwrap();
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
@@ -126,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_parse_custom_type_record() {
-        let input = "type CustomType { admin: Bool, age: U8 }";
+        let input = "type CustomType { admin: Bool, age: U8, }";
         let (_, parsed) = super::parse_custom_type(input).unwrap();
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(

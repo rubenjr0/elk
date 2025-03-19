@@ -21,13 +21,12 @@ pub enum Type {
     Bool,
     String,
 
+    /// Type name, generic parameters
     Custom(String, Vec<String>),
     Function(FunctionSignature),
 
     // Special types
     Unit,
-    /// For type inference, illegal
-    Pending,
 }
 
 impl Type {
@@ -41,7 +40,7 @@ impl Type {
             Type::F32 => T::F32,
             Type::F64 => T::F64,
             Type::Bool => T::I8,
-            Type::Pending => panic!("Pending type cannot be converted to Cranelift type"),
+            Type::Custom(_, _) => T::I64,
             _ => todo!(),
         }
     }

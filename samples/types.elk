@@ -1,0 +1,8 @@
+type Person {
+    age: U8
+}
+
+main {
+    bob = Person { age = 30 };
+    bob.age
+}
