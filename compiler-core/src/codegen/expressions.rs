@@ -1,12 +1,9 @@
 use core::panic;
 
-use cranelift::{
-    codegen::{entity::ListPool, ir::BlockCall},
-    prelude::{types, FunctionBuilder, InstBuilder, IntCC, JumpTableData, Type, Value},
-};
+use cranelift::prelude::{types, FunctionBuilder, InstBuilder, IntCC, Value};
 use cranelift_module::Module;
 
-use crate::frontend::ast::expressions::{BinaryOp, Expression, Literal, MatchArm};
+use crate::frontend::ast::expressions::{BinaryOp, Expression, Literal};
 
 use super::Codegen;
 
@@ -21,19 +18,13 @@ impl Codegen {
         match &expression.kind {
             ExpressionKind::Literal(literal) => gen_literal(literal, builder),
             ExpressionKind::Identifier(var_name) => {
-                let (_, var) = self.variables.get(var_name).unwrap();
+                let (_, var) = self.get_variable(var_name).unwrap();
                 builder.use_var(*var)
             }
             ExpressionKind::BinaryOp(lhs, op, rhs) => self.gen_binary_op(lhs, rhs, op, builder),
             ExpressionKind::FunctionCall(function_name, args) => {
                 self.gen_function_call(function_name, args, builder)
             }
-            ExpressionKind::Match(expr, arms) => self.gen_match(
-                expression.associated_type.to_cranelift(),
-                expr,
-                arms,
-                builder,
-            ),
             ExpressionKind::Unit => builder.ins().iconst(types::I32, 0),
             _ => todo!(),
         }
@@ -71,44 +62,12 @@ impl Codegen {
             .iter()
             .map(|e| self.gen_expression(e, builder))
             .collect();
-        let (_, func_id, _, _) = self.functions.get(function_name).unwrap();
-        let fref = self
-            .module
-            .borrow_mut()
-            .declare_func_in_func(*func_id, builder.func);
+        let (func_id, _) = self.get_function(function_name).unwrap();
+        let fref = self.module.declare_func_in_func(*func_id, builder.func);
 
         let i = builder.ins().call(fref, &args);
         let val = builder.inst_results(i)[0];
         val
-    }
-
-    fn gen_match(
-        &mut self,
-        ty: Type,
-        expr: &Expression,
-        arms: &[MatchArm],
-        builder: &mut FunctionBuilder,
-    ) -> Value {
-        let entry_block = builder.current_block();
-        let merge_block = builder.create_block();
-        builder.append_block_param(merge_block, ty);
-
-        let match_val = self.gen_expression(expr, builder);
-
-        let arm_blocks: Vec<_> = arms.iter().map(|arm| builder.create_block()).collect();
-
-        let mut pool = ListPool::new();
-        let block_calls: Vec<_> = arm_blocks
-            .into_iter()
-            .map(|block| BlockCall::new(block, &[], &mut pool))
-            .collect();
-        let merge_call = BlockCall::new(merge_block, &[], &mut pool);
-
-        let jt_data = JumpTableData::new(merge_call, &block_calls);
-        let jt = builder.create_jump_table(jt_data);
-        builder.ins().br_table(match_val, jt);
-
-        match_val
     }
 }
 

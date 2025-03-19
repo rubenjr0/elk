@@ -1,4 +1,4 @@
-use cranelift::prelude::{EntityRef, FunctionBuilder, Value, Variable};
+use cranelift::prelude::{FunctionBuilder, Value};
 
 use crate::frontend::ast::statements::Block;
 
@@ -13,11 +13,10 @@ impl Codegen {
             match stmt {
                 crate::frontend::ast::statements::Statement::Assignment(var_name, expression) => {
                     let ty = expression.associated_type.to_cranelift();
-                    let var = Variable::new(self.variables.len());
+                    let var = self.declare_variable(var_name, ty);
                     let val = self.gen_expression(expression, builder);
                     builder.declare_var(var, ty);
                     builder.def_var(var, val);
-                    self.variables.insert(var_name.to_owned(), (ty, var));
                 }
                 crate::frontend::ast::statements::Statement::Return(expr) => {
                     return self.gen_expression(expr, builder);
