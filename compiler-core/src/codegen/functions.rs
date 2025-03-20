@@ -70,7 +70,7 @@ impl Codegen {
             )
             .unwrap();
 
-            eprintln!("{func}");
+            eprintln!("IR: {func}");
 
             let mut ctx = Context::for_function(func);
             codegen.module.define_function(fid, &mut ctx).unwrap();

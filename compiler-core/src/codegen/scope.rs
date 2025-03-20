@@ -49,4 +49,8 @@ impl Scope {
     pub fn get_function(&self, func_name: &str) -> Option<&(FuncId, Signature)> {
         self.functions.get(func_name)
     }
+
+    pub fn get_type(&self, ty_name: &str) -> Option<&CustomType> {
+        self.types.iter().find(|ty| ty.name() == ty_name)
+    }
 }

@@ -1,5 +1,5 @@
 default:
-    cargo r -p elk samples/types.elk
+    cargo r -p elk samples/simple_sample.elk
 
 test:
     # needs cargo-nextest

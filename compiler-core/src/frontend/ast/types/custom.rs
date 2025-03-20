@@ -39,6 +39,22 @@ impl CustomType {
     pub const fn content(&self) -> &CustomTypeContent {
         &self.content
     }
+
+    pub fn get_record_fields(&self) -> Option<&Vec<(String, Type)>> {
+        if let CustomTypeContent::Record(fields) = &self.content {
+            Some(fields)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_enum_variants(&self) -> Option<&Vec<Variant>> {
+        if let CustomTypeContent::Enum(variants) = &self.content {
+            Some(variants)
+        } else {
+            None
+        }
+    }
 }
 
 impl Variant {
