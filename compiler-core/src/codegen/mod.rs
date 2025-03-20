@@ -46,7 +46,7 @@ impl Default for Codegen {
 impl Codegen {
     fn compile_type_definitions(&mut self, type_definitions: &[CustomType]) {
         for td in type_definitions {
-            self.gen_type_definition(td);
+            self.define_type(td);
         }
     }
 
@@ -135,5 +135,9 @@ impl Codegen {
             .iter()
             .rev()
             .find_map(|s| s.get_function(func_name))
+    }
+
+    fn get_type(&self, type_name: &str) -> Option<&CustomType> {
+        self.scopes.iter().rev().find_map(|s| s.get_type(type_name))
     }
 }

@@ -33,14 +33,13 @@ impl Type {
     pub fn to_cranelift(&self) -> cranelift::prelude::Type {
         use cranelift::prelude::types as T;
         match self {
-            Type::I8 | Type::U8 => T::I8,
-            Type::I16 | Type::U16 => T::I16,
-            Type::I32 | Type::U32 => T::I32,
-            Type::I64 | Type::U64 | Type::Function(_) => T::I64,
-            Type::F32 => T::F32,
-            Type::F64 => T::F64,
-            Type::Bool => T::I8,
-            Type::Custom(_, _) => T::I64,
+            Self::I8 | Self::U8 => T::I8,
+            Self::I16 | Self::U16 => T::I16,
+            Self::I32 | Self::U32 => T::I32,
+            Self::I64 | Self::U64 | Self::Function(_) | Self::Custom(_, _) => T::I64,
+            Self::F32 => T::F32,
+            Self::F64 => T::F64,
+            Self::Bool => T::I8,
             _ => todo!(),
         }
     }

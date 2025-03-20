@@ -505,7 +505,6 @@ mod tests {
             Option.None -> False
         }";
         let (rem, parsed) = parse_expr(input).unwrap();
-        eprintln!("{rem}");
         assert!(rem.is_empty());
         assert_eq!(
             parsed,

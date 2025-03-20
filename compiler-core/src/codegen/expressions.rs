@@ -26,8 +26,12 @@ impl Codegen {
                 self.gen_function_call(function_name, args, builder)
             }
             ExpressionKind::Unit => builder.ins().iconst(types::I32, 0),
-            ExpressionKind::NewRecordInstance(a, b) => self.gen_new_record_instance(a, b, builder),
-            ExpressionKind::RecordAccess(a, b) => self.gen_record_access(a, b, builder),
+            ExpressionKind::NewRecordInstance(record_name, fields) => {
+                self.gen_new_record_instance(record_name, fields, builder)
+            }
+            ExpressionKind::RecordAccess(var_name, field_name) => {
+                self.gen_record_access(var_name, field_name, builder)
+            }
             _ => todo!(),
         }
     }
@@ -70,24 +74,6 @@ impl Codegen {
         let i = builder.ins().call(fref, &args);
         let val = builder.inst_results(i)[0];
         val
-    }
-
-    fn gen_new_record_instance(
-        &mut self,
-        record_name: &str,
-        fields: &[(String, Expression)],
-        builder: &mut FunctionBuilder,
-    ) -> Value {
-        todo!()
-    }
-
-    fn gen_record_access(
-        &mut self,
-        record_name: &str,
-        field_name: &str,
-        builder: &mut FunctionBuilder,
-    ) -> Value {
-        todo!()
     }
 }
 

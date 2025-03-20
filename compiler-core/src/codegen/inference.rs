@@ -1,12 +1,11 @@
 // Perform type inference on the AST. Usually by replacing `Type::Pending` with a concrete type.
 
-use core::panic;
 use std::collections::BTreeMap;
 
 use crate::frontend::ast::{
     expressions::{Expression, ExpressionKind, MatchArm},
     program::Program,
-    types::{custom::CustomTypeContent, CustomType, Type},
+    types::{CustomType, Type},
 };
 
 #[derive(Default)]
@@ -45,7 +44,7 @@ impl TypeInference {
     }
 
     pub fn infer_expr(&self, expression: &mut Expression) -> Type {
-        expression.associated_type.clone().unwrap_or_else(|| {
+        let ty = expression.associated_type.clone().unwrap_or_else(|| {
             let ty = match expression.kind.clone() {
                 ExpressionKind::Identifier(var_name) => {
                     self.variables.get(&var_name).unwrap().clone()
@@ -57,54 +56,61 @@ impl TypeInference {
                 ExpressionKind::UnaryOp(_, mut expression) => self.infer_expr(&mut expression),
                 ExpressionKind::Unit => Type::Unit,
                 ExpressionKind::FunctionCall(name, _) => self.functions.get(&name).unwrap().clone(),
-                ExpressionKind::Match(mut expr, mut arms) => self.infer_match(&mut expr, &mut arms),
+                ExpressionKind::Match(mut expr, arms) => self.infer_match(&mut expr, &arms),
                 ExpressionKind::RecordAccess(var_name, field_name) => {
-                    let ty = self.variables.get(&var_name).unwrap();
-                    let Type::Custom(name, _) = ty else {
-                        panic!("Expected custom type for record access");
-                    };
-                    let ty = self.types.iter().find(|t| t.name() == name).unwrap();
-                    eprintln!("Found type: {:?}", ty);
-                    let CustomTypeContent::Record(a) = ty.content() else {
-                        panic!("Expected record type for record access");
-                    };
-                    a.iter()
-                        .find(|(name, _)| name == &field_name)
-                        .map(|(_, value)| value.clone())
-                        .expect("Record field not found")
+                    self.infer_record_access(&var_name, &field_name)
                 }
+
                 _ => todo!(),
             };
             ty
-        })
+        });
+        expression.associated_type = Some(ty.clone());
+        ty
     }
 
     fn infer_binary_op(&self, lhs: &mut Expression, rhs: &mut Expression) -> Type {
         let lhs_type = self.infer_expr(lhs);
         let rhs_type = self.infer_expr(rhs);
         if lhs_type != rhs_type {
-            panic!()
+            panic!("type mismatch")
         }
         lhs_type
     }
 
-    fn infer_match(&self, expr: &mut Expression, arms: &mut [MatchArm]) -> Type {
+    fn infer_match(&self, expr: &mut Expression, arms: &[MatchArm]) -> Type {
         self.infer_expr(expr);
         let arms: Vec<_> = arms
             .iter()
             .filter_map(|arm| match &arm.body {
                 crate::frontend::ast::expressions::MatchBody::Block(block) => {
-                    block.return_expr.associated_type.clone()
+                    block.return_expr.associated_type.to_owned()
                 }
                 crate::frontend::ast::expressions::MatchBody::Expr(expression) => {
-                    expression.associated_type.clone()
+                    expression.associated_type.to_owned()
                 }
             })
             .collect();
         if arms.iter().all(|x| x == &arms[0]) {
-            arms[0].clone()
+            arms[0].to_owned()
         } else {
-            panic!()
+            panic!("type mismatch in match arms")
         }
+    }
+
+    fn infer_record_access(&self, var_name: &str, field_name: &str) -> Type {
+        let ty = self.variables.get(var_name).expect("Variable not found");
+        let Type::Custom(name, _) = ty else {
+            panic!("Expected custom type for record access");
+        };
+        self.types
+            .iter()
+            .find(|t| t.name() == name)
+            .and_then(|t| t.get_record_fields())
+            .expect("Record type not found")
+            .iter()
+            .find(|(name, _)| name == field_name)
+            .map(|(_, value)| value.to_owned())
+            .expect("Record field not found")
     }
 }
