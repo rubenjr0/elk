@@ -102,14 +102,12 @@ impl TypeInference {
             .find(|t| t.name() == type_name)
             .expect("Type not found");
         let original_fields = ty.get_record_fields().expect("Type is not a record");
-        fields.iter_mut().for_each(|(name, expr)| {
-            let new_ty = original_fields
-                .iter()
-                .find(|f| f.name() == name)
-                .unwrap()
-                .ty()
-                .to_owned();
-            expr.set_type(new_ty);
+        original_fields.iter().for_each(|f| {
+            let (_, expr) = fields
+                .iter_mut()
+                .find(|(field_name, _)| f.name() == field_name)
+                .expect("Field not found");
+            expr.set_type(f.ty().to_owned());
         });
         Type::Custom(type_name.to_owned(), vec![])
     }

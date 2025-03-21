@@ -18,7 +18,9 @@ mod scope;
 mod statements;
 
 pub trait Generable {
+    /// Returns the size in bytes of the construct
     fn size(&self) -> u32;
+
     fn to_cranelift(&self) -> cranelift::prelude::Type;
 }
 

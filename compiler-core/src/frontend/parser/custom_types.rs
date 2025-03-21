@@ -45,7 +45,14 @@ pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
 
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
     alt((
-        map(parse_variants, CustomTypeContent::Enum),
+        map(parse_variants, |vs| {
+            CustomTypeContent::Enum(
+                vs.into_iter()
+                    .enumerate()
+                    .map(|(i, v)| (i as u8, v))
+                    .collect(),
+            )
+        }),
         map(parse_fields, |r| {
             let mut fields: Vec<Field> = r.into_iter().map(|(s, t)| Field::new(&s, t)).collect();
             fields.sort_by_key(|f| f.name().to_owned());
@@ -67,17 +74,14 @@ fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Type)>> {
 
 fn parse_variant(input: &str) -> IResult<&str, Variant> {
     let (remaining, name) = parse_identifier_upper(input)?;
-    let (remaining, variant) = alt((
-        map(
-            delimited(
-                tag("("),
-                separated_list0(ws(tag(",")), parse_type),
-                tag(")"),
-            ),
-            |types| Variant::new(name, types),
-        ),
-        map(tag(""), |_| Variant::named(name)), // can this be simplified?
-    ))(remaining)?;
+    let (remaining, variant) = alt((map(
+        opt(delimited(
+            tag("("),
+            separated_list0(ws(tag(",")), parse_type),
+            tag(")"),
+        )),
+        |types| Variant::new(name, types.unwrap_or_default()),
+    ),))(remaining)?;
 
     Ok((remaining, variant))
 }
@@ -109,7 +113,10 @@ mod tests {
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Enum(vec![Variant::named("VariantA"), Variant::named("VariantB"),])
+            &CustomTypeContent::Enum(vec![
+                (0, Variant::new("VariantA", vec![])),
+                (1, Variant::new("VariantB", vec![])),
+            ])
         );
     }
 
@@ -121,8 +128,11 @@ mod tests {
         assert_eq!(
             parsed.content(),
             &CustomTypeContent::Enum(vec![
-                Variant::new("Some", vec![Type::Custom("T".to_owned(), vec![])]),
-                Variant::named("None"),
+                (
+                    0,
+                    Variant::new("Some", vec![Type::Custom("T".to_owned(), vec![])])
+                ),
+                (1, Variant::new("None", vec![])),
             ])
         );
     }

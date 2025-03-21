@@ -13,7 +13,7 @@ pub struct CustomType {
 #[derive(Debug, Clone, PartialEq)]
 /// Data types defined by the user can be Enums, Records, or Markers (empty)
 pub enum CustomTypeContent {
-    Enum(Vec<Variant>),
+    Enum(Vec<(u8, Variant)>),
     Record(Vec<Field>),
     Empty,
 }
@@ -50,11 +50,8 @@ impl CustomType {
 
     pub fn size(&self) -> u32 {
         match &self.content {
-            CustomTypeContent::Enum(variants) => variants
-                .iter()
-                .map(|v| v.types.iter().map(|t| t.size()).sum::<u32>())
-                .sum(),
-            CustomTypeContent::Record(items) => items.iter().map(|f| f.ty.size()).sum(),
+            CustomTypeContent::Enum(variants) => variants.len() as u32,
+            CustomTypeContent::Record(items) => items.iter().map(|f| f.ty.size()).sum::<u32>() / 8,
             CustomTypeContent::Empty => 0,
         }
     }
@@ -67,7 +64,7 @@ impl CustomType {
         }
     }
 
-    pub fn get_enum_variants(&self) -> Option<&Vec<Variant>> {
+    pub fn get_enum_variants(&self) -> Option<&Vec<(u8, Variant)>> {
         if let CustomTypeContent::Enum(variants) = &self.content {
             Some(variants)
         } else {
@@ -82,10 +79,6 @@ impl Variant {
             name: name.to_owned(),
             types,
         }
-    }
-
-    pub fn named(name: &str) -> Self {
-        Self::new(name, vec![])
     }
 
     pub fn name(&self) -> &str {

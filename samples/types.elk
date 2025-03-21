@@ -1,9 +1,15 @@
+type Status {
+    Idle
+    , Working
+}
+
 type Person {
-    age: U16,
-    idx: U16
+    idx: U32
+    , age: U8
+    , status: Status
 }
 
 main {
-    bob = Person { age: 30, idx: 123 };
+    bob = Person { age: 30, idx: 123, status: Status.Idle };
     bob.age
 }

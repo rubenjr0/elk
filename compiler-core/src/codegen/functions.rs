@@ -3,13 +3,16 @@ use cranelift::{
         ir::{Function, UserFuncName},
         verify_function, Context,
     },
-    prelude::{settings::FlagsOrIsa, FunctionBuilder, FunctionBuilderContext, InstBuilder},
+    prelude::{settings::FlagsOrIsa, FunctionBuilder, FunctionBuilderContext, InstBuilder, Value},
 };
 use cranelift_module::Module;
 
 use crate::{
     codegen::Generable,
-    frontend::ast::functions::{FunctionDeclaration, FunctionImplementation},
+    frontend::ast::{
+        expressions::Expression,
+        functions::{FunctionDeclaration, FunctionImplementation},
+    },
 };
 
 use super::Codegen;
@@ -79,5 +82,22 @@ impl Codegen {
             let mut ctx = Context::for_function(func);
             codegen.module.define_function(fid, &mut ctx).unwrap();
         });
+    }
+
+    pub fn gen_function_call(
+        &mut self,
+        function_name: &str,
+        args: &[Expression],
+        builder: &mut FunctionBuilder,
+    ) -> Value {
+        let args: Vec<_> = args
+            .iter()
+            .map(|e| self.gen_expression(e, builder))
+            .collect();
+        let (func_id, _) = self.get_function(function_name).unwrap();
+        let fref = self.module.declare_func_in_func(*func_id, builder.func);
+
+        let i = builder.ins().call(fref, &args);
+        builder.inst_results(i)[0]
     }
 }
