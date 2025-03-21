@@ -1,5 +1,7 @@
 use cranelift::prelude::{isa::CallConv, AbiParam, Signature};
 
+use crate::codegen::Generable;
+
 use super::Type;
 
 #[derive(Debug, Clone, PartialEq)]

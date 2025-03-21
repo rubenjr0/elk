@@ -1,5 +1,3 @@
-// Perform type inference on the AST. Usually by replacing `Type::Pending` with a concrete type.
-
 use std::collections::BTreeMap;
 
 use crate::frontend::ast::{
@@ -18,23 +16,22 @@ pub struct TypeInference {
 impl TypeInference {
     pub fn infer_program(&mut self, program: &mut Program) {
         for fd in &program.function_declarations {
-            self.functions
-                .insert(fd.name().to_owned(), fd.signature().return_type().clone());
+            self.functions.insert(
+                fd.name().to_owned(),
+                fd.signature().return_type().to_owned(),
+            );
         }
 
         for a in &program.type_definitions {
-            self.types.push(a.clone());
+            self.types.push(a.to_owned());
         }
 
         for stmt in &mut program.entry_point.statements {
             match stmt {
-                crate::frontend::ast::statements::Statement::Assignment(var_name, expression) => {
-                    expression.associated_type = Some(self.infer_expr(expression));
-                    let ty = expression
-                        .associated_type()
-                        .expect("Type should be inferred")
-                        .clone();
-                    self.variables.insert(var_name.to_owned(), ty);
+                crate::frontend::ast::statements::Statement::Assignment(var_name, expr) => {
+                    let new_ty = self.infer_expr(expr);
+                    expr.set_type(new_ty.to_owned());
+                    self.variables.insert(var_name.to_owned(), new_ty);
                 }
                 crate::frontend::ast::statements::Statement::Return(_) => todo!(),
             }
@@ -43,29 +40,25 @@ impl TypeInference {
         self.infer_expr(&mut program.entry_point.return_expr);
     }
 
-    pub fn infer_expr(&self, expression: &mut Expression) -> Type {
-        let ty = expression.associated_type.clone().unwrap_or_else(|| {
-            let ty = match expression.kind.clone() {
-                ExpressionKind::Identifier(var_name) => {
-                    self.variables.get(&var_name).unwrap().clone()
-                }
-                ExpressionKind::Literal(literal) => literal.get_type(),
-                ExpressionKind::BinaryOp(mut lhs, _, mut rhs) => {
-                    self.infer_binary_op(&mut lhs, &mut rhs)
-                }
-                ExpressionKind::UnaryOp(_, mut expression) => self.infer_expr(&mut expression),
-                ExpressionKind::Unit => Type::Unit,
-                ExpressionKind::FunctionCall(name, _) => self.functions.get(&name).unwrap().clone(),
-                ExpressionKind::Match(mut expr, arms) => self.infer_match(&mut expr, &arms),
-                ExpressionKind::RecordAccess(var_name, field_name) => {
-                    self.infer_record_access(&var_name, &field_name)
-                }
-
-                _ => todo!(),
-            };
-            ty
-        });
-        expression.associated_type = Some(ty.clone());
+    pub fn infer_expr(&self, expr: &mut Expression) -> Type {
+        let ty = match expr.kind_mut() {
+            ExpressionKind::Identifier(var_name) => {
+                self.variables.get(var_name).unwrap().to_owned()
+            }
+            ExpressionKind::BinaryOp(lhs, _, rhs) => self.infer_binary_op(lhs, rhs),
+            ExpressionKind::UnaryOp(_, expr) => self.infer_expr(expr),
+            ExpressionKind::Unit => Type::Unit,
+            ExpressionKind::FunctionCall(name, _) => self.functions.get(name).unwrap().to_owned(),
+            ExpressionKind::Match(expr, arms) => self.infer_match(expr, arms),
+            ExpressionKind::NewRecordInstance(type_name, fields) => {
+                self.infer_new_record_instance(type_name, fields)
+            }
+            ExpressionKind::RecordAccess(var_name, field_name) => {
+                self.infer_record_access(var_name, field_name)
+            }
+            _ => todo!(),
+        };
+        expr.set_type(ty.to_owned());
         ty
     }
 
@@ -86,8 +79,8 @@ impl TypeInference {
                 crate::frontend::ast::expressions::MatchBody::Block(block) => {
                     block.return_expr.associated_type.to_owned()
                 }
-                crate::frontend::ast::expressions::MatchBody::Expr(expression) => {
-                    expression.associated_type.to_owned()
+                crate::frontend::ast::expressions::MatchBody::Expr(expr) => {
+                    expr.associated_type.to_owned()
                 }
             })
             .collect();
@@ -96,6 +89,29 @@ impl TypeInference {
         } else {
             panic!("type mismatch in match arms")
         }
+    }
+
+    fn infer_new_record_instance(
+        &self,
+        type_name: &str,
+        fields: &mut [(String, Expression)],
+    ) -> Type {
+        let ty = self
+            .types
+            .iter()
+            .find(|t| t.name() == type_name)
+            .expect("Type not found");
+        let original_fields = ty.get_record_fields().expect("Type is not a record");
+        fields.iter_mut().for_each(|(name, expr)| {
+            let new_ty = original_fields
+                .iter()
+                .find(|f| f.name() == name)
+                .unwrap()
+                .ty()
+                .to_owned();
+            expr.set_type(new_ty);
+        });
+        Type::Custom(type_name.to_owned(), vec![])
     }
 
     fn infer_record_access(&self, var_name: &str, field_name: &str) -> Type {
@@ -109,8 +125,8 @@ impl TypeInference {
             .and_then(|t| t.get_record_fields())
             .expect("Record type not found")
             .iter()
-            .find(|(name, _)| name == field_name)
-            .map(|(_, value)| value.to_owned())
+            .find(|f| f.name() == field_name)
+            .map(|f| f.ty().to_owned())
             .expect("Record field not found")
     }
 }

@@ -70,7 +70,7 @@ mod tests {
 
         assert_eq!(
             statement,
-            Statement::Assignment("_z".to_owned(), Expression::literal(Literal::u8(1)))
+            Statement::Assignment("_z".to_owned(), Expression::literal(Literal::int(1)))
         );
     }
 
@@ -81,7 +81,7 @@ mod tests {
 
         assert_eq!(
             statement,
-            Statement::Return(Expression::literal(Literal::u8(1)))
+            Statement::Return(Expression::literal(Literal::int(1)))
         );
     }
 
@@ -95,7 +95,7 @@ mod tests {
             Block::new(
                 vec![Statement::Assignment(
                     "_z".to_owned(),
-                    Expression::literal(Literal::u8(1))
+                    Expression::literal(Literal::int(1))
                 ),],
                 Expression::identifier("_z".to_owned())
             )
@@ -112,7 +112,7 @@ mod tests {
             Block::new(
                 vec![Statement::Assignment(
                     "_z".to_owned(),
-                    Expression::literal(Literal::u8(1))
+                    Expression::literal(Literal::int(1))
                 ),],
                 Expression::unit()
             )

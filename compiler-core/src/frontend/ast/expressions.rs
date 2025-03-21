@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::{statements::Block, types::Type};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,8 +29,16 @@ pub enum ExpressionKind {
 }
 
 impl Expression {
+    pub fn kind_mut(&mut self) -> &mut ExpressionKind {
+        &mut self.kind
+    }
+
     pub fn associated_type(&self) -> Option<&Type> {
         self.associated_type.as_ref()
+    }
+
+    pub fn set_type(&mut self, ty: Type) {
+        self.associated_type = Some(ty);
     }
 
     pub const fn unit() -> Self {
@@ -46,10 +56,9 @@ impl Expression {
     }
 
     pub fn literal(literal: Literal) -> Self {
-        let associated_type = literal.get_type();
         Self {
             kind: ExpressionKind::Literal(literal),
-            associated_type: Some(associated_type),
+            associated_type: None,
         }
     }
 
@@ -106,40 +115,19 @@ impl Expression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
-    Integer(u64, Type),
-    Float(f64, Type),
+    Integer(u64),
+    Float(f64),
     Bool(bool),
     String(String),
 }
 
 impl Literal {
-    pub fn get_type(&self) -> Type {
-        match self {
-            Literal::Integer(_, ty) => ty.clone(),
-            Literal::Float(_, ty) => ty.clone(),
-            Literal::Bool(_) => Type::Bool,
-            Literal::String(_) => Type::String,
-        }
+    pub fn int<T: TryInto<u64, Error = impl Debug>>(val: T) -> Self {
+        Self::Integer(val.try_into().unwrap())
     }
 
-    pub fn i8(val: i8) -> Self {
-        Self::Integer(val as u64, Type::I8)
-    }
-
-    pub fn u8(val: u8) -> Self {
-        Self::Integer(val as u64, Type::U8)
-    }
-
-    pub fn i32(val: i32) -> Self {
-        Self::Integer(val as u64, Type::I32)
-    }
-
-    pub fn u32(val: u32) -> Self {
-        Self::Integer(val as u64, Type::U32)
-    }
-
-    pub fn f32(val: f32) -> Self {
-        Self::Float(val as f64, Type::F32)
+    pub fn float<T: TryInto<f64, Error = impl Debug>>(val: T) -> Self {
+        Self::Float(val.try_into().unwrap())
     }
 }
 

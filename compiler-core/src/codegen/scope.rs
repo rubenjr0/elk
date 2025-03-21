@@ -1,13 +1,16 @@
 use std::collections::BTreeMap;
 
-use cranelift::prelude::{Signature, Type, Variable};
+use cranelift::prelude::Variable;
 use cranelift_module::FuncId;
 
-use crate::frontend::ast::types::CustomType;
+use crate::frontend::ast::types::{CustomType, FunctionSignature, Type};
+
+/// Variable identifier, type and pointer
+pub type Var = (Variable, Type);
 
 pub struct Scope {
-    variables: BTreeMap<String, (Variable, Type)>,
-    functions: BTreeMap<String, (FuncId, Signature)>,
+    variables: BTreeMap<String, Var>,
+    functions: BTreeMap<String, (FuncId, FunctionSignature)>,
     types: Vec<CustomType>,
     var_counter: u32,
 }
@@ -33,7 +36,12 @@ impl Scope {
         var
     }
 
-    pub fn declare_function(&mut self, func_name: &str, func_id: FuncId, signature: Signature) {
+    pub fn declare_function(
+        &mut self,
+        func_name: &str,
+        func_id: FuncId,
+        signature: FunctionSignature,
+    ) {
         self.functions
             .insert(func_name.to_owned(), (func_id, signature));
     }
@@ -42,11 +50,11 @@ impl Scope {
         self.types.push(ty.clone());
     }
 
-    pub fn get_variable(&self, var_name: &str) -> Option<&(Variable, Type)> {
+    pub fn get_variable(&self, var_name: &str) -> Option<&Var> {
         self.variables.get(var_name)
     }
 
-    pub fn get_function(&self, func_name: &str) -> Option<&(FuncId, Signature)> {
+    pub fn get_function(&self, func_name: &str) -> Option<&(FuncId, FunctionSignature)> {
         self.functions.get(func_name)
     }
 

@@ -1,8 +1,9 @@
 type Person {
-    age: U8
+    age: U16,
+    idx: U16
 }
 
 main {
-    bob = Person { age = 30 };
+    bob = Person { age: 30, idx: 123 };
     bob.age
 }

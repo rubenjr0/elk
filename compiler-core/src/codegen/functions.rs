@@ -7,15 +7,18 @@ use cranelift::{
 };
 use cranelift_module::Module;
 
-use crate::frontend::ast::functions::{FunctionDeclaration, FunctionImplementation};
+use crate::{
+    codegen::Generable,
+    frontend::ast::functions::{FunctionDeclaration, FunctionImplementation},
+};
 
 use super::Codegen;
 
 impl Codegen {
     pub fn gen_function_declaration(&mut self, function_declaration: &FunctionDeclaration) {
-        let sig = function_declaration.signature().to_cranelift();
+        let sig = function_declaration.signature();
 
-        self.declare_function(function_declaration.name(), sig);
+        self.declare_function(function_declaration.name(), sig.to_owned());
     }
 
     pub fn gen_function_implementation(
@@ -27,7 +30,8 @@ impl Codegen {
             .unwrap()
             .clone();
         self.with_scope(|codegen| {
-            let mut func = Function::with_name_signature(UserFuncName::user(0, 0), sig.clone());
+            let mut func =
+                Function::with_name_signature(UserFuncName::user(0, 0), sig.to_cranelift());
 
             let mut func_ctx = FunctionBuilderContext::new();
             let mut builder = FunctionBuilder::new(&mut func, &mut func_ctx);
@@ -40,11 +44,11 @@ impl Codegen {
             function_implementation
                 .arguments()
                 .iter()
-                .zip(sig.params.iter())
+                .zip(sig.arguments())
                 .enumerate()
                 .for_each(|(i, (var_name, ty))| {
-                    let var = codegen.declare_variable(var_name, ty.value_type);
-                    builder.declare_var(var, ty.value_type);
+                    let var = codegen.declare_variable(var_name, ty.to_owned());
+                    builder.declare_var(var, ty.to_cranelift());
                     let tmp = builder.block_params(entry_block)[i];
                     builder.def_var(var, tmp);
                 });
@@ -70,7 +74,7 @@ impl Codegen {
             )
             .unwrap();
 
-            eprintln!("IR: {func}");
+            eprintln!("== IR ==\n{:?}", func);
 
             let mut ctx = Context::for_function(func);
             codegen.module.define_function(fid, &mut ctx).unwrap();
