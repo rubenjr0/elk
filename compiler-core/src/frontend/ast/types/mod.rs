@@ -34,10 +34,10 @@ pub enum Type {
 impl Generable for Type {
     fn size(&self) -> u32 {
         match self {
-            Self::I8 | Self::U8 | Self::Bool => 8,
-            Self::I16 | Self::U16 => 16,
-            Self::I32 | Self::U32 | Self::F32 => 32,
-            Self::I64 | Self::U64 | Self::F64 | Self::Function(_) | Self::Custom(_, _) => 64,
+            Self::I8 | Self::U8 | Self::Bool => 1,
+            Self::I16 | Self::U16 => 2,
+            Self::I32 | Self::U32 | Self::F32 => 4,
+            Self::I64 | Self::U64 | Self::F64 | Self::Function(_) | Self::Custom(_, _) => 8,
             _ => todo!(),
         }
     }

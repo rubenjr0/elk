@@ -1,4 +1,4 @@
-use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, Value};
+use cranelift::prelude::{types, FunctionBuilder, InstBuilder, MemFlags, Value};
 use cranelift_module::Module;
 
 use crate::{
@@ -67,5 +67,30 @@ impl Codegen {
             ptr,
             offset as i32,
         )
+    }
+
+    pub fn gen_new_enum_instance(
+        &self,
+        enum_name: &str,
+        variant_name: &str,
+        builder: &mut FunctionBuilder,
+    ) -> Value {
+        let ty = self.get_type(enum_name).expect("Enum not found");
+        let (discriminant, _) = ty
+            .get_enum_variants()
+            .expect("Type is not an enum")
+            .iter()
+            .find(|(_, v)| v.name() == variant_name)
+            .expect("Variant not found on enum");
+        let data = cranelift::prelude::StackSlotData::new(
+            cranelift::prelude::StackSlotKind::ExplicitSlot,
+            ty.size(),
+            0,
+        );
+        let ss = builder.create_sized_stack_slot(data);
+        let discriminant = builder.ins().iconst(types::I8, *discriminant as i64);
+        builder.ins().stack_store(discriminant, ss, 0);
+        let ty = self.module.target_config().pointer_type();
+        builder.ins().stack_addr(ty, ss, 0)
     }
 }

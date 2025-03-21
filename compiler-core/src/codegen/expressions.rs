@@ -1,7 +1,6 @@
 use core::panic;
 
 use cranelift::prelude::{types, FunctionBuilder, InstBuilder, IntCC, Value};
-use cranelift_module::Module;
 
 use crate::frontend::ast::{
     expressions::{BinaryOp, Expression, Literal},
@@ -33,6 +32,9 @@ impl Codegen {
             ExpressionKind::RecordAccess(var_name, field_name) => {
                 self.gen_record_access(var_name, field_name, builder)
             }
+            ExpressionKind::NewEnumInstance(enum_name, variant_name, _) => {
+                self.gen_new_enum_instance(enum_name, variant_name, builder)
+            }
             _ => todo!(),
         }
     }
@@ -57,24 +59,6 @@ impl Codegen {
             BinaryOp::NotEq => builder.ins().icmp(IntCC::NotEqual, lhs, rhs),
             _ => todo!(),
         }
-    }
-
-    fn gen_function_call(
-        &mut self,
-        function_name: &str,
-        args: &[Expression],
-        builder: &mut FunctionBuilder,
-    ) -> Value {
-        let args: Vec<_> = args
-            .iter()
-            .map(|e| self.gen_expression(e, builder))
-            .collect();
-        let (func_id, _) = self.get_function(function_name).unwrap();
-        let fref = self.module.declare_func_in_func(*func_id, builder.func);
-
-        let i = builder.ins().call(fref, &args);
-        let val = builder.inst_results(i)[0];
-        val
     }
 }
 
