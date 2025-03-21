@@ -7,12 +7,12 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::{
-    frontend::ast::types::{
-        custom::{CustomTypeContent, Variant},
+use crate::frontend::{
+    ast::types::{
+        custom::{CustomTypeContent, Field, Variant},
         CustomType, Type,
     },
-    frontend::parser::common::{parse_identifier_upper, ws},
+    parser::common::{parse_identifier_upper, ws},
 };
 
 use super::{common::parse_identifier_lower, types::parse_type};
@@ -46,7 +46,11 @@ pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
     alt((
         map(parse_variants, CustomTypeContent::Enum),
-        map(parse_fields, CustomTypeContent::Record),
+        map(parse_fields, |r| {
+            let mut fields: Vec<Field> = r.into_iter().map(|(s, t)| Field::new(&s, t)).collect();
+            fields.sort_by_key(|f| f.name().to_owned());
+            CustomTypeContent::Record(fields)
+        }),
     ))
     .parse(input)
 }
@@ -87,7 +91,7 @@ fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
 
 #[cfg(test)]
 mod tests {
-    use crate::frontend::ast::types::custom::{CustomTypeContent, Variant};
+    use crate::frontend::ast::types::custom::{CustomTypeContent, Field, Variant};
     use crate::frontend::ast::types::Type;
 
     #[test]
@@ -131,8 +135,8 @@ mod tests {
         assert_eq!(
             parsed.content(),
             &CustomTypeContent::Record(vec![
-                ("admin".to_owned(), Type::Bool),
-                ("age".to_owned(), Type::U8),
+                Field::new("admin", Type::Bool),
+                Field::new("age", Type::U8),
             ])
         );
     }

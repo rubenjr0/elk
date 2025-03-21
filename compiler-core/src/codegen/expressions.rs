@@ -3,20 +3,21 @@ use core::panic;
 use cranelift::prelude::{types, FunctionBuilder, InstBuilder, IntCC, Value};
 use cranelift_module::Module;
 
-use crate::frontend::ast::expressions::{BinaryOp, Expression, Literal};
+use crate::frontend::ast::{
+    expressions::{BinaryOp, Expression, Literal},
+    types::Type,
+};
 
-use super::Codegen;
+use super::{Codegen, Generable};
 
 impl Codegen {
-    pub fn gen_expression(
-        &mut self,
-        expression: &Expression,
-        builder: &mut FunctionBuilder,
-    ) -> Value {
+    pub fn gen_expression(&mut self, expr: &Expression, builder: &mut FunctionBuilder) -> Value {
         use crate::frontend::ast::expressions::ExpressionKind;
 
-        match &expression.kind {
-            ExpressionKind::Literal(literal) => gen_literal(literal, builder),
+        match &expr.kind {
+            ExpressionKind::Literal(literal) => {
+                gen_literal(literal, expr.associated_type().unwrap(), builder)
+            }
             ExpressionKind::Identifier(var_name) => {
                 let (var, _) = self.get_variable(var_name).unwrap();
                 builder.use_var(*var)
@@ -77,10 +78,10 @@ impl Codegen {
     }
 }
 
-fn gen_literal(lit: &Literal, builder: &mut FunctionBuilder) -> Value {
+fn gen_literal(lit: &Literal, ty: &Type, builder: &mut FunctionBuilder) -> Value {
     match lit {
-        Literal::Integer(v, ty) => builder.ins().iconst(ty.to_cranelift(), *v as i64),
-        Literal::Float(v, ty) => match ty {
+        Literal::Integer(v) => builder.ins().iconst(ty.to_cranelift(), *v as i64),
+        Literal::Float(v) => match ty {
             crate::frontend::ast::types::Type::F32 => builder.ins().f32const(*v as f32),
             crate::frontend::ast::types::Type::F64 => builder.ins().f64const(*v),
             _ => panic!("this is never supposed to happen!"),

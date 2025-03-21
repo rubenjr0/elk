@@ -102,7 +102,7 @@ mod tests {
         assert_eq!(function_impl.arguments(), &["_x", "_y"]);
         assert_eq!(
             function_impl.body(),
-            &FunctionBody::SingleLine(Expression::literal(Literal::u8(1)))
+            &FunctionBody::SingleLine(Expression::literal(Literal::int(1)))
         );
     }
 
@@ -116,7 +116,7 @@ mod tests {
 
         let expected_statements = vec![Statement::Assignment(
             "_z".to_owned(),
-            Expression::literal(Literal::u8(1)),
+            Expression::literal(Literal::int(1)),
         )];
 
         assert_eq!(function_impl.name(), "my_function");
@@ -145,7 +145,7 @@ mod tests {
         assert!(remaining.is_empty());
         assert_eq!(
             function_body,
-            FunctionBody::SingleLine(Expression::literal(Literal::u8(1)))
+            FunctionBody::SingleLine(Expression::literal(Literal::int(1)))
         );
     }
 
@@ -158,7 +158,7 @@ mod tests {
             function_body,
             FunctionBody::MultiLine(Block::new_without_return(vec![Statement::Assignment(
                 "_z".to_owned(),
-                Expression::literal(Literal::u8(1))
+                Expression::literal(Literal::int(1))
             )]))
         );
     }

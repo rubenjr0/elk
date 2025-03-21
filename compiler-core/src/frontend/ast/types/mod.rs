@@ -5,6 +5,8 @@ pub mod function;
 pub use custom::CustomType;
 pub use function::FunctionSignature;
 
+use crate::codegen::Generable;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // Primitive types
@@ -29,8 +31,18 @@ pub enum Type {
     Unit,
 }
 
-impl Type {
-    pub fn to_cranelift(&self) -> cranelift::prelude::Type {
+impl Generable for Type {
+    fn size(&self) -> u32 {
+        match self {
+            Self::I8 | Self::U8 | Self::Bool => 8,
+            Self::I16 | Self::U16 => 16,
+            Self::I32 | Self::U32 | Self::F32 => 32,
+            Self::I64 | Self::U64 | Self::F64 | Self::Function(_) | Self::Custom(_, _) => 64,
+            _ => todo!(),
+        }
+    }
+
+    fn to_cranelift(&self) -> cranelift::prelude::Type {
         use cranelift::prelude::types as T;
         match self {
             Self::I8 | Self::U8 => T::I8,

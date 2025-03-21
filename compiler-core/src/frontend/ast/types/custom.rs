@@ -1,3 +1,5 @@
+use crate::codegen::Generable;
+
 use super::Type;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -12,7 +14,7 @@ pub struct CustomType {
 /// Data types defined by the user can be Enums, Records, or Markers (empty)
 pub enum CustomTypeContent {
     Enum(Vec<Variant>),
-    Record(Vec<(String, Type)>),
+    Record(Vec<Field>),
     Empty,
 }
 
@@ -21,6 +23,12 @@ pub enum CustomTypeContent {
 pub struct Variant {
     name: String,
     types: Vec<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field {
+    name: String,
+    ty: Type,
 }
 
 impl CustomType {
@@ -40,7 +48,18 @@ impl CustomType {
         &self.content
     }
 
-    pub fn get_record_fields(&self) -> Option<&Vec<(String, Type)>> {
+    pub fn size(&self) -> u32 {
+        match &self.content {
+            CustomTypeContent::Enum(variants) => variants
+                .iter()
+                .map(|v| v.types.iter().map(|t| t.size()).sum::<u32>())
+                .sum(),
+            CustomTypeContent::Record(items) => items.iter().map(|f| f.ty.size()).sum(),
+            CustomTypeContent::Empty => 0,
+        }
+    }
+
+    pub fn get_record_fields(&self) -> Option<&Vec<Field>> {
         if let CustomTypeContent::Record(fields) = &self.content {
             Some(fields)
         } else {
@@ -75,5 +94,22 @@ impl Variant {
 
     pub const fn types(&self) -> &Vec<Type> {
         &self.types
+    }
+}
+
+impl Field {
+    pub fn new(name: &str, ty: Type) -> Self {
+        Self {
+            name: name.to_owned(),
+            ty,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
     }
 }

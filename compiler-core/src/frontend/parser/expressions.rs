@@ -38,10 +38,10 @@ fn parse_literal(input: &str) -> IResult<&str, Expression> {
     let (remaining, lit) = alt((
         map(parse_bool, Literal::Bool),
         map(parse_string, Literal::String),
-        map(u8, Literal::u8),
-        map(i8, Literal::i8),
-        map(u32, Literal::u32),
-        map(i32, Literal::i32),
+        map(u8, Literal::int),
+        map(i8, Literal::int),
+        map(u32, Literal::int),
+        map(i32, Literal::int),
     ))
     .parse(input)?;
     Ok((remaining, Expression::literal(lit)))
@@ -108,7 +108,7 @@ fn parse_variant_args(input: &str) -> IResult<&str, Vec<Expression>> {
     .parse(input)
 }
 
-/// Example: `MyType { field1 = 1, field2 = 2 }`
+/// Example: `MyType { field1: 1, field2: 2 }`
 fn parse_new_type_instance(input: &str) -> IResult<&str, Expression> {
     let (input, ty) = parse_identifier_upper(input)?;
     let (input, fields) = parse_fields(input)?;
@@ -131,7 +131,7 @@ fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Expression)>> {
 fn parse_field(input: &str) -> IResult<&str, (String, Expression)> {
     separated_pair(
         parse_identifier_lower.map(str::to_owned),
-        ws(tag("=")),
+        ws(tag(":")),
         parse_expr,
     )
     .parse(input)
@@ -267,42 +267,42 @@ mod tests {
     fn test_parse_literal_u8() {
         let input = "37";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::u8(37)));
+        assert_eq!(expr, Expression::literal(Literal::int(37)));
     }
 
     #[test]
     fn test_parse_literal_binary() {
         let input = "0b110";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::u8(6)));
+        assert_eq!(expr, Expression::literal(Literal::int(6)));
     }
 
     #[test]
     fn test_parse_literal_octal() {
         let input = "0o20";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::u8(16)));
+        assert_eq!(expr, Expression::literal(Literal::int(16)));
     }
 
     #[test]
     fn test_parse_literal_hexadecimal() {
         let input = "0x20";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::u8(32)));
+        assert_eq!(expr, Expression::literal(Literal::int(32)));
     }
 
     #[test]
     fn test_parse_literal_f32() {
         let input = "0.12";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::f32(0.12)));
+        assert_eq!(expr, Expression::literal(Literal::float(0.12)));
     }
 
     #[test]
     fn test_parse_literal_i8() {
         let input = "-37";
         let (_, expr) = parse_expr(input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::i8(-37)));
+        assert_eq!(expr, Expression::literal(Literal::int(-37)));
     }
 
     #[test]
@@ -352,14 +352,14 @@ mod tests {
             Expression::new_enum_instance(
                 "Option".to_owned(),
                 "Some".to_owned(),
-                vec![Expression::literal(Literal::u8(1)),]
+                vec![Expression::literal(Literal::int(1)),]
             )
         );
     }
 
     #[test]
     fn test_parse_new_record_instance_with_fields() {
-        let input = "Person { name = \"Bob\", is_builder = True }";
+        let input = "Person { name: \"Bob\", is_builder: True }";
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
@@ -397,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_parse_function_call_complex() {
-        let input = "my_function (other_fn 42) (Person { name = \"Bob\" })";
+        let input = "my_function (other_fn 42) (Person { name: \"Bob\" })";
         let (_, parsed) = parse_expr(input).unwrap();
         assert_eq!(
             parsed,
@@ -406,7 +406,7 @@ mod tests {
                 vec![
                     Expression::function_call(
                         "other_fn".to_owned(),
-                        vec![Expression::literal(Literal::u8(42))]
+                        vec![Expression::literal(Literal::int(42))]
                     ),
                     Expression::new_record_instance(
                         "Person".to_owned(),
@@ -430,7 +430,7 @@ mod tests {
                 "my_function".to_owned(),
                 vec![Expression::function_call(
                     "other_fn".to_owned(),
-                    vec![Expression::literal(Literal::u8(42))]
+                    vec![Expression::literal(Literal::int(42))]
                 ),]
             )
         );
@@ -451,11 +451,11 @@ mod tests {
                 vec![
                     MatchArm {
                         pattern: Expression::literal(Literal::Bool(true)),
-                        body: MatchBody::Expr(Expression::literal(Literal::u8(1))),
+                        body: MatchBody::Expr(Expression::literal(Literal::int(1))),
                     },
                     MatchArm {
                         pattern: Expression::literal(Literal::Bool(false)),
-                        body: MatchBody::Expr(Expression::literal(Literal::u8(0)))
+                        body: MatchBody::Expr(Expression::literal(Literal::int(0)))
                     }
                 ]
             )
@@ -480,7 +480,7 @@ mod tests {
                 ),
                 vec![
                     MatchArm {
-                        pattern: Expression::literal(Literal::u8(1)),
+                        pattern: Expression::literal(Literal::int(1)),
                         body: MatchBody::Expr(Expression::literal(Literal::Bool(true))),
                     },
                     MatchArm {
@@ -542,9 +542,9 @@ mod tests {
         assert_eq!(
             parsed,
             Expression::binary_op(
-                Expression::literal(Literal::u8(1)),
+                Expression::literal(Literal::int(1)),
                 BinaryOp::Add,
-                Expression::literal(Literal::u8(2))
+                Expression::literal(Literal::int(2))
             )
         );
     }

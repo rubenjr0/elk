@@ -1,30 +1,71 @@
-use cranelift::prelude::{FunctionBuilder, Value};
+use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, Value};
+use cranelift_module::Module;
 
-use crate::frontend::ast::expressions::Expression;
+use crate::{
+    codegen::Generable,
+    frontend::ast::{expressions::Expression, types::Type},
+};
 
 use super::Codegen;
 
 impl Codegen {
     pub fn gen_new_record_instance(
-        &self,
+        &mut self,
         record_name: &str,
         fields: &[(String, Expression)],
         builder: &mut FunctionBuilder,
     ) -> Value {
-        let record_fields = self
-            .get_type(record_name)
-            .and_then(|t| t.get_record_fields())
-            .unwrap();
+        let ty = self.get_type(record_name).expect("Type not found");
+        let size = ty.size();
 
-        todo!()
+        let data = cranelift::prelude::StackSlotData::new(
+            cranelift::prelude::StackSlotKind::ExplicitSlot,
+            size,
+            0,
+        );
+        let ss = builder.create_sized_stack_slot(data);
+        let mut offset = 0;
+        fields.iter().for_each(|(_, expr)| {
+            let off = offset;
+            offset += expr.associated_type().map(|t| t.size()).unwrap();
+            let v = self.gen_expression(expr, builder);
+            builder.ins().stack_store(v, ss, off as i32);
+        });
+
+        let ty = self.module.target_config().pointer_type();
+        builder.ins().stack_addr(ty, ss, 0)
     }
 
     pub fn gen_record_access(
         &self,
-        record_name: &str,
+        var_name: &str,
         field_name: &str,
         builder: &mut FunctionBuilder,
     ) -> Value {
-        todo!()
+        let (var, ty) = self.get_variable(var_name).expect("Type not found");
+        let Type::Custom(type_name, _) = ty else {
+            panic!("Type is not defined");
+        };
+        let fields = self
+            .get_type(type_name)
+            .and_then(|t| t.get_record_fields())
+            .expect("Type is not a record");
+        let mut offset = 0;
+        let (field, offset) = fields
+            .iter()
+            .map(|f| {
+                let off = offset;
+                offset += f.ty().size();
+                (f, off)
+            })
+            .find(|(f, _)| f.name() == field_name)
+            .unwrap();
+        let ptr = builder.use_var(*var);
+        builder.ins().load(
+            field.ty().to_cranelift(),
+            MemFlags::new(),
+            ptr,
+            offset as i32,
+        )
     }
 }

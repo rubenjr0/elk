@@ -1,4 +1,8 @@
-use super::{expressions::Expression, statements::Block, types::FunctionSignature};
+use super::{
+    expressions::Expression,
+    statements::Block,
+    types::{FunctionSignature, Type},
+};
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
@@ -27,10 +31,10 @@ impl FunctionDeclaration {
         }
     }
 
-    pub fn main() -> Self {
+    pub fn main(ty: &Type) -> Self {
         Self {
             name: "main".to_owned(),
-            signature: FunctionSignature::new(vec![], super::types::Type::I8),
+            signature: FunctionSignature::new(vec![], ty.to_owned()),
         }
     }
 

@@ -1,13 +1,13 @@
-use cranelift::prelude::{settings::Flags, Signature, Type, Variable};
+use cranelift::prelude::{settings::Flags, Variable};
 use cranelift_module::{FuncId, Module};
 use cranelift_object::{ObjectBuilder, ObjectModule};
-use scope::Scope;
+use scope::{Scope, Var};
 
 use crate::frontend::ast::{
     functions::{FunctionDeclaration, FunctionImplementation},
     program::Program,
     statements::Block,
-    types::CustomType,
+    types::{CustomType, FunctionSignature, Type},
 };
 
 mod custom_types;
@@ -16,6 +16,11 @@ mod functions;
 pub mod inference;
 mod scope;
 mod statements;
+
+pub trait Generable {
+    fn size(&self) -> u32;
+    fn to_cranelift(&self) -> cranelift::prelude::Type;
+}
 
 pub struct Codegen {
     scopes: Vec<Scope>,
@@ -66,7 +71,8 @@ impl Codegen {
     }
 
     fn compile_entrypoint(&mut self, entry_point: &Block) {
-        self.gen_function_declaration(&FunctionDeclaration::main());
+        let ty = entry_point.return_expr.associated_type().unwrap();
+        self.gen_function_declaration(&FunctionDeclaration::main(ty));
 
         self.gen_function_implementation(&FunctionImplementation::main(entry_point));
     }
@@ -108,10 +114,14 @@ impl Codegen {
             .declare_variable(var_name, ty)
     }
 
-    fn declare_function(&mut self, func_name: &str, signature: Signature) {
+    fn declare_function(&mut self, func_name: &str, signature: FunctionSignature) {
         let func_id = self
             .module
-            .declare_function(func_name, cranelift_module::Linkage::Export, &signature)
+            .declare_function(
+                func_name,
+                cranelift_module::Linkage::Export,
+                &signature.to_cranelift(),
+            )
             .unwrap();
         self.scopes
             .last_mut()
@@ -123,14 +133,14 @@ impl Codegen {
         self.scopes.last_mut().unwrap().define_type(custom_type);
     }
 
-    fn get_variable(&self, var_name: &str) -> Option<&(Variable, Type)> {
+    fn get_variable(&self, var_name: &str) -> Option<&Var> {
         self.scopes
             .iter()
             .rev()
             .find_map(|s| s.get_variable(var_name))
     }
 
-    fn get_function(&self, func_name: &str) -> Option<&(FuncId, Signature)> {
+    fn get_function(&self, func_name: &str) -> Option<&(FuncId, FunctionSignature)> {
         self.scopes
             .iter()
             .rev()
