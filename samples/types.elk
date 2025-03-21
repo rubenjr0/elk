@@ -10,6 +10,10 @@ type Person {
 }
 
 main {
-    bob = Person { age: 30, idx: 123, status: Status.Idle };
-    bob.age
+    bob = Person {
+        age: 30
+        , idx: 123
+        , status: Status.Idle
+    };
+    bob.idx
 }
