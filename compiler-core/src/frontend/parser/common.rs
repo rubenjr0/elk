@@ -6,15 +6,15 @@ use nom::sequence::{delimited, pair, preceded};
 use nom::{branch::alt, bytes::complete::tag};
 use nom::{IResult, Parser};
 
-pub fn ws<'a, O, E: ParseError<&'a str>, F: Parser<&'a str, O, E>>(
+pub fn ws<'a, O, E: ParseError<&'a str>, F: Parser<&'a str, Output = O, Error = E>>(
     f: F,
-) -> impl Parser<&'a str, O, E> {
+) -> impl Parser<&'a str, Output = O, Error = E> {
     delimited(multispace0, f, multispace0)
 }
 
-pub fn opt_parenthesis<'a, O, E: ParseError<&'a str>, F: Parser<&'a str, O, E>>(
+pub fn opt_parenthesis<'a, O, E: ParseError<&'a str>, F: Parser<&'a str, Output = O, Error = E>>(
     f: F,
-) -> impl Parser<&'a str, O, E> {
+) -> impl Parser<&'a str, Output = O, Error = E> {
     delimited(opt(ws(tag("("))), f, opt(ws(tag(")"))))
 }
 

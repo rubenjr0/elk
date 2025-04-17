@@ -74,16 +74,15 @@ fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Type)>> {
 
 fn parse_variant(input: &str) -> IResult<&str, Variant> {
     let (remaining, name) = parse_identifier_upper(input)?;
-    let (remaining, variant) = alt((map(
+    alt((map(
         opt(delimited(
             tag("("),
             separated_list0(ws(tag(",")), parse_type),
             tag(")"),
         )),
         |types| Variant::new(name, types.unwrap_or_default()),
-    ),))(remaining)?;
-
-    Ok((remaining, variant))
+    ),))
+    .parse(remaining)
 }
 
 fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
