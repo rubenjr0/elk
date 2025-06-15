@@ -1,0 +1,10 @@
+[package]
+name = "elk"
+version = "0.1.0"
+edition = "2021"
+license-file = "LICENSE"
+
+[dependencies]
+core = { path = "../core" }
+clap = { version = "4.5.36", features = ["derive"] }
+anyhow = "1.0.98"

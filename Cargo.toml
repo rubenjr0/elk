@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["compiler-core", "compiler-cli"]
+members = [
+    "crates/cli",
+    "crates/core",
+    "crates/codegen",
+    "crates/ast",
+    "crates/parser",
+]
 
 [profile.release]
 strip = true

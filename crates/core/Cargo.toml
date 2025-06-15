@@ -1,0 +1,10 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+license-file = "LICENSE"
+
+[dependencies]
+ast = { path = "../ast" }
+parser = { path = "../parser" }
+codegen = { path = "../codegen" }
