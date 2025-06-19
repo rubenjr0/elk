@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use ast::{
-    expressions::{Expression, ExpressionKind, Literal, MatchArm, MatchBody},
+    expressions::{AssociatedType, Expression, ExpressionKind, Literal, MatchArm, MatchBody},
     program::Program,
     statements::Statement,
     types::{CustomType, FunctionSignature, Type},
@@ -12,7 +12,10 @@ pub struct TypeInference {
     variables: BTreeMap<String, Type>,
     types: Vec<CustomType>,
     functions: BTreeMap<String, FunctionSignature>,
+    constraints: Vec<Constraint>,
 }
+
+struct Constraint;
 
 impl TypeInference {
     pub fn infer_program(&mut self, program: &mut Program) {
@@ -29,7 +32,7 @@ impl TypeInference {
             match stmt {
                 Statement::Assignment(var_name, expr) => {
                     let new_ty = self.infer_expr(expr);
-                    expr.set_type(new_ty.to_owned());
+                    expr.set_type(AssociatedType::Concrete(new_ty.to_owned()));
                     self.variables.insert(var_name.to_owned(), new_ty);
                 }
                 Statement::Return(_) => todo!(),
@@ -67,7 +70,7 @@ impl TypeInference {
             }
             _ => todo!("Expression {expr:?} is not implemented yet"),
         };
-        expr.set_type(ty.to_owned());
+        expr.set_type(AssociatedType::Concrete(ty.to_owned()));
         ty
     }
 
@@ -85,12 +88,18 @@ impl TypeInference {
         let arms: Vec<_> = arms
             .iter()
             .filter_map(|arm| match &arm.body {
-                MatchBody::Block(block) => block.return_expr.associated_type.to_owned(),
-                MatchBody::Expr(expr) => expr.associated_type.to_owned(),
+                MatchBody::Block(block) => Some(block.return_expr.associated_type.to_owned()),
+                MatchBody::Expr(expr) => Some(expr.associated_type.to_owned()),
             })
             .collect();
         if arms.iter().all(|x| x == &arms[0]) {
-            arms[0].to_owned()
+            arms[0]
+                .to_owned()
+                .and_then(|t| match t {
+                    AssociatedType::Concrete(ty) => Some(ty),
+                    AssociatedType::Unknown(_) => None,
+                })
+                .unwrap()
         } else {
             panic!("type mismatch in match arms")
         }
@@ -112,7 +121,7 @@ impl TypeInference {
                 .iter_mut()
                 .find(|(field_name, _)| f.name() == field_name)
                 .expect("Field not found");
-            expr.set_type(f.ty().to_owned());
+            expr.set_type(AssociatedType::Concrete(f.ty().to_owned()));
         });
         Type::Custom(type_name.to_owned(), vec![])
     }

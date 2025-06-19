@@ -5,7 +5,7 @@ members = [
     "crates/core",
     "crates/codegen",
     "crates/ast",
-    "crates/parser",
+    "crates/parser", "crates/inference",
 ]
 
 [profile.release]

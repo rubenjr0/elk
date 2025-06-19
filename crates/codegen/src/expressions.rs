@@ -13,7 +13,8 @@ impl Codegen {
     pub fn gen_expression(&mut self, expr: &Expression, builder: &mut FunctionBuilder) -> Value {
         match &expr.kind {
             ExpressionKind::Literal(literal) => {
-                gen_literal(literal, expr.associated_type().unwrap(), builder)
+                let ty = expr.get_type().unwrap();
+                gen_literal(literal, ty, builder)
             }
             ExpressionKind::Identifier(var_name) => {
                 let (var, _) = self.get_variable(var_name).unwrap();

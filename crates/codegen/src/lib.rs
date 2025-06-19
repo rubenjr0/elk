@@ -12,7 +12,6 @@ use scope::{Scope, Var};
 mod custom_types;
 mod expressions;
 mod functions;
-pub mod inference;
 mod scope;
 mod statements;
 mod types;
@@ -75,7 +74,7 @@ impl Codegen {
     }
 
     fn compile_entrypoint(&mut self, entry_point: &Block) {
-        let ty = entry_point.return_expr.associated_type().unwrap();
+        let ty = entry_point.return_expr.get_type().unwrap();
         self.gen_function_declaration(&FunctionDeclaration::main(ty));
 
         self.gen_function_implementation(&FunctionImplementation::main(entry_point));

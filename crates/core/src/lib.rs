@@ -1,7 +1,8 @@
 #![warn(clippy::all, clippy::perf, clippy::style)]
 
 use ast::program::Program;
-use codegen::{inference::TypeInference, Codegen};
+use codegen::Codegen;
+use inference::TypeInference;
 
 /// Exposes the pipeline for compiling source code.
 pub fn compile_to_object(source: &str) -> Vec<u8> {

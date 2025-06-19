@@ -8,3 +8,4 @@ license-file = "LICENSE"
 ast = { path = "../ast" }
 parser = { path = "../parser" }
 codegen = { path = "../codegen" }
+inference = { path = "../inference" }

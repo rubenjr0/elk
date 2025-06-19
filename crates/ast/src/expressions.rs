@@ -5,7 +5,13 @@ use super::{statements::Block, types::Type};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
     pub kind: ExpressionKind,
-    pub associated_type: Option<Type>,
+    pub associated_type: Option<AssociatedType>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AssociatedType {
+    Concrete(Type),
+    Unknown(u32),
 }
 
 /// Expr is the base of the AST.
@@ -33,18 +39,25 @@ impl Expression {
         &mut self.kind
     }
 
-    pub fn associated_type(&self) -> Option<&Type> {
+    pub fn associated_type(&self) -> Option<&AssociatedType> {
         self.associated_type.as_ref()
     }
 
-    pub fn set_type(&mut self, ty: Type) {
-        self.associated_type = Some(ty);
+    pub fn get_type(&self) -> Option<&Type> {
+        match &self.associated_type {
+            Some(AssociatedType::Concrete(ty)) => Some(ty),
+            _ => None,
+        }
+    }
+
+    pub fn set_type(&mut self, ty: AssociatedType) {
+        self.associated_type = Some(ty)
     }
 
     pub const fn unit() -> Self {
         Self {
             kind: ExpressionKind::Unit,
-            associated_type: Some(Type::Unit),
+            associated_type: Some(AssociatedType::Concrete(Type::Unit)),
         }
     }
 
@@ -65,7 +78,7 @@ impl Expression {
     pub fn new_enum_instance(enum_name: String, variant_name: String, fields: Vec<Self>) -> Self {
         Self {
             kind: ExpressionKind::NewEnumInstance(enum_name.to_owned(), variant_name, fields),
-            associated_type: Some(Type::Custom(enum_name, vec![])),
+            associated_type: Some(AssociatedType::Concrete(Type::Custom(enum_name, vec![]))),
         }
     }
 
@@ -73,7 +86,7 @@ impl Expression {
         let associated_type = Type::Custom(record_name.clone(), vec![]);
         Self {
             kind: ExpressionKind::NewRecordInstance(record_name, fields),
-            associated_type: Some(associated_type),
+            associated_type: Some(AssociatedType::Concrete(associated_type)),
         }
     }
 

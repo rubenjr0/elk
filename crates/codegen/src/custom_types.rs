@@ -1,5 +1,5 @@
 use ast::{
-    expressions::Expression,
+    expressions::{AssociatedType, Expression},
     types::{CustomType, Type},
 };
 use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, Value, types};
@@ -38,7 +38,11 @@ impl Codegen {
         let mut offset = 0;
         fields.iter().for_each(|(_, expr)| {
             let off = offset;
-            offset += expr.associated_type().map(|t| t.size()).unwrap();
+            if let AssociatedType::Concrete(ty) = expr.associated_type().unwrap() {
+                offset += ty.size();
+            } else {
+                panic!("Type not inferred");
+            }
             let v = self.gen_expression(expr, builder);
             builder.ins().stack_store(v, ss, off as i32);
         });
