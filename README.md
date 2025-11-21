@@ -25,14 +25,27 @@ Inspired by Gleam, Rust, Elm, Haskell and Scala.
 - [ ] Sntax
 
 #### 1. Decoupled definition and implementations
-- Advantages: Pattern matching, multiple implementations. Arbitrary variable names.
-- Disadvantages: Have to remember the order of the types.
-
-Example:
+Examples:
 ```
+// Inline
+sum(a: U8, b: U8) -> U8 = a + b;
+// Block
+sum(a: U8, b: U8) -> U8 {
+  a + b
+}
+// Decoupled, multiple implementations
+sum(a: U8, b: U8) -> U8;
+sum(a, 0) = a;
+sum(0, b) = b;
+sum(a, b) = a + b;
+
 is_origin : (U8, U8) -> Bool;
 is_origin (0, 0) = True;
 is_origin _ = False;
+
+some_func(arg1: U8, arg2: Option(U8)) -> U8;
+some_func(arg1, None) = arg1;
+some_func(arg1, Some(arg2)) = arg1 + arg2;
 ```
 
 #### 2. Decoupled definition, single implementation.
