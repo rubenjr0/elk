@@ -1,20 +1,8 @@
-use ast::types::{
-    CustomType, Type,
-    custom::{CustomTypeContent, Field, Variant},
-};
-use nom::{
-    IResult, Parser,
-    branch::alt,
-    bytes::complete::tag,
-    combinator::{map, opt},
-    multi::{separated_list0, separated_list1},
-    sequence::{delimited, terminated},
-};
+use winnow::combinator::{delimited, separated};
 
-use crate::{
-    common::{parse_identifier_lower, parse_identifier_upper, ws},
-    types::parse_type,
-};
+use winnow::{Parser, Result};
+
+use crate::identifiers::parse_identifier_upper;
 
 /// Custom types are defined as follows:
 /// `type CustomType { VariantA, VariantB }`
@@ -30,16 +18,6 @@ pub fn parse_custom_type(input: &str) -> IResult<&str, CustomType> {
     .or(|a| Ok((a, CustomTypeContent::Empty)))
     .parse(input)?;
     Ok((input, CustomType::new(name, content, generics)))
-}
-
-pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
-    opt(delimited(
-        ws(tag("(")),
-        separated_list1(ws(tag(",")), parse_identifier_upper.map(str::to_string)),
-        ws(tag(")")),
-    ))
-    .map(Option::unwrap_or_default)
-    .parse(input)
 }
 
 fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
@@ -94,8 +72,8 @@ fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
 #[cfg(test)]
 mod tests {
     use ast::types::{
-        Type,
         custom::{CustomTypeContent, Field, Variant},
+        Type,
     };
 
     #[test]
