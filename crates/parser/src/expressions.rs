@@ -50,6 +50,7 @@ fn parse_unit(input: &mut &str) -> Result<Expression> {
     "Unit".parse_next(input).map(|_| Expression::unit())
 }
 
+// TODO: Escaped strings and so on
 fn parse_string(input: &mut &str) -> Result<String> {
     delimited('"', alphanumeric0, '"')
         .parse_next(input)
@@ -276,10 +277,10 @@ mod tests {
     #[test]
     fn test_parse_string() {
         let mut input = r#""hello, \"world\"""#;
-        let expr = parse_expr(&mut input).unwrap();
-
+        let expr = parse_expr(&mut input);
+        eprintln!("{expr:?}");
         assert_eq!(
-            expr,
+            expr.unwrap(),
             Expression::literal(Literal::String("hello, \"world\"".to_owned()))
         );
     }

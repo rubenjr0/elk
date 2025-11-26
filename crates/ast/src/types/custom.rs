@@ -4,7 +4,7 @@ use super::Type;
 /// Data type defined by the user
 pub struct CustomType {
     name: String,
-    content: CustomTypeContent,
+    content: Option<CustomTypeContent>,
     generics: Vec<String>,
 }
 
@@ -13,7 +13,6 @@ pub struct CustomType {
 pub enum CustomTypeContent {
     Enum(Vec<(u8, Variant)>),
     Record(Vec<Field>),
-    Empty,
 }
 
 /// Variants of an enum, can contain types
@@ -30,7 +29,7 @@ pub struct Field {
 }
 
 impl CustomType {
-    pub fn new(name: &str, content: CustomTypeContent, generics: Vec<String>) -> Self {
+    pub fn new(name: &str, content: Option<CustomTypeContent>, generics: Vec<String>) -> Self {
         Self {
             name: name.to_owned(),
             content,
@@ -42,12 +41,12 @@ impl CustomType {
         &self.name
     }
 
-    pub const fn content(&self) -> &CustomTypeContent {
-        &self.content
+    pub const fn content(&self) -> Option<&CustomTypeContent> {
+        self.content.as_ref()
     }
 
     pub fn get_record_fields(&self) -> Option<&Vec<Field>> {
-        if let CustomTypeContent::Record(fields) = &self.content {
+        if let Some(CustomTypeContent::Record(fields)) = &self.content {
             Some(fields)
         } else {
             None
@@ -55,7 +54,7 @@ impl CustomType {
     }
 
     pub fn get_enum_variants(&self) -> Option<&Vec<(u8, Variant)>> {
-        if let CustomTypeContent::Enum(variants) = &self.content {
+        if let Some(CustomTypeContent::Enum(variants)) = &self.content {
             Some(variants)
         } else {
             None

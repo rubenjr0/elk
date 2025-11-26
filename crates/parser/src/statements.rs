@@ -1,10 +1,10 @@
 use ast::statements::{Block, Statement};
 use winnow::{
     Parser, Result,
-    combinator::{delimited, repeat, terminated, todo},
+    combinator::{alt, delimited, repeat, terminated},
 };
 
-use crate::{expressions::parse_expr, ws};
+use crate::{expressions::parse_expr, identifiers::parse_identifier_lower, ws};
 
 pub fn parse_block(input: &mut &str) -> Result<Block> {
     delimited(ws('{'), parse_block_content, ws('}')).parse_next(input)
@@ -25,26 +25,24 @@ fn parse_statements(input: &mut &str) -> Result<Vec<Statement>> {
 
 fn parse_statement(input: &mut &str) -> Result<Statement> {
     terminated(
-        // alt((parse_assign_statement, parse_return_statement)),
-        todo,
+        alt((parse_assign_statement, parse_return_statement)),
         ws(';'),
     )
     .parse_next(input)
 }
 
-// fn parse_assign_statement(input: &str) -> IResult<&str, Statement> {
-//     let (input, identifier) = parse_identifier_lower(input)?;
-//     let (input, _) = ws(tag("=")).parse(input)?;
-//     let (input, expr) = parse_expr(input)?;
-//     Ok((input, Statement::Assignment(identifier.to_owned(), expr)))
-// }
+fn parse_assign_statement(input: &mut &str) -> Result<Statement> {
+    let identifier = parse_identifier_lower(input)?;
+    let _ = ws('=').parse_next(input)?;
+    let expr = parse_expr(input)?;
+    Ok(Statement::Assignment(identifier.to_owned(), expr))
+}
 
-// fn parse_return_statement(input: &str) -> IResult<&str, Statement> {
-//     let (input, _) = ws(tag("return")).parse(input)?;
-//     let (input, expr) = parse_expr(input)?;
-
-//     Ok((input, Statement::Return(expr)))
-// }
+fn parse_return_statement(input: &mut &str) -> Result<Statement> {
+    let _ = ws("return").parse_next(input)?;
+    let expr = parse_expr(input)?;
+    Ok(Statement::Return(expr))
+}
 
 // #[cfg(test)]
 // mod tests {

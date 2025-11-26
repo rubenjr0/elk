@@ -1,19 +1,12 @@
-use std::array::repeat;
+use winnow::{Parser, ascii::multispace0, combinator::delimited, error::ParserError};
 
-use winnow::{
-    Parser,
-    ascii::multispace0,
-    combinator::delimited,
-    error::{FromExternalError, ParserError},
-};
-
-// mod custom_types;
+mod custom_types;
 // mod functions;
 // pub mod program;
-// mod top_level;
 pub mod expressions;
 mod identifiers;
 mod statements;
+mod top_level;
 mod types;
 
 pub fn ws<'a, F, O, E: ParserError<&'a str>>(inner: F) -> impl Parser<&'a str, O, E>

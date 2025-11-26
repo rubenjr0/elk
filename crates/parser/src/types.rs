@@ -1,3 +1,4 @@
+use crate::custom_types::parse_custom_type_generics;
 use crate::identifiers::parse_identifier_upper;
 use crate::ws;
 use ast::types::{FunctionSignature, Type};
@@ -40,13 +41,8 @@ fn parse_custom_type(input: &mut &str) -> Result<Type> {
     let name = parse_identifier_upper.parse_next(input)?;
     let generics = opt(parse_custom_type_generics)
         .parse_next(input)?
-        .map(|v| v.into_iter().map(ToOwned::to_owned).collect())
         .unwrap_or_default();
     Ok(Type::Custom(name.to_owned(), generics))
-}
-
-fn parse_custom_type_generics<'s>(input: &mut &'s str) -> Result<Vec<&'s str>> {
-    delimited('(', separated(1.., parse_identifier_upper, ws(',')), ')').parse_next(input)
 }
 
 #[cfg(test)]
