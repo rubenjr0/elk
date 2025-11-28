@@ -4,7 +4,7 @@ use ast::{
 };
 use winnow::{
     Parser, Result,
-    combinator::{alt, delimited, separated, separated_pair, terminated},
+    combinator::{alt, delimited, opt, separated, separated_pair, terminated},
     error::{StrContext, StrContextValue},
 };
 
@@ -26,17 +26,23 @@ pub fn parse_function_signature(input: &mut &str) -> Result<FunctionSignature> {
             ws('('),
             separated(
                 1..,
-                alt((
-                    parse_primitive_type,
-                    parse_custom_type,
-                    delimited(ws('('), parse_function_signature, ws(')'))
-                        .map(Type::Function)
-                        .context(StrContext::Label("sub-function")),
-                )),
+                (
+                    opt(terminated(parse_identifier_lower, ws(':')))
+                        .context(StrContext::Label("ArgLabel")),
+                    alt((
+                        parse_primitive_type,
+                        parse_custom_type,
+                        delimited(ws('('), parse_function_signature, ws(')'))
+                            .map(Type::Function)
+                            .context(StrContext::Label("sub-function")),
+                    )),
+                )
+                    .map(|(_label, t)| t),
                 ws(','),
             ),
             ws(')'),
-        ),
+        )
+        .context(StrContext::Label("SignatureArgs")),
         ws("->"),
         parse_type,
     )
@@ -169,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_parse_higher_order_function_signature() {
-        let mut input = "(((U8) -> U8), U8) -> U8";
+        let mut input = "(f: ((U8) -> U8), n: U8) -> U8";
         let expected = FunctionSignature::new(
             vec![
                 Type::Function(FunctionSignature::new(vec![Type::U8], Type::U8)),
