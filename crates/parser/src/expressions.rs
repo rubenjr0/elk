@@ -120,7 +120,7 @@ fn parse_field_access(input: &mut &str) -> Result<Expression> {
 
 fn parse_function_call(input: &mut &str) -> Result<Expression> {
     let function_name = parse_identifier_lower(input)?;
-    let args = parse_function_args(input)?;
+    let args = parse_function_call_args(input)?;
     Ok(Expression::function_call(function_name.to_owned(), args))
 }
 
@@ -130,7 +130,7 @@ fn parse_function_call(input: &mut &str) -> Result<Expression> {
 /// expr -> is function call?
 /// - yes: nested function calls must go between parenthesis
 /// - no: function call doesnt need to go between parenthesis
-fn parse_function_args(input: &mut &str) -> Result<Vec<Expression>> {
+fn parse_function_call_args(input: &mut &str) -> Result<Vec<Expression>> {
     delimited(
         '(',
         separated(

@@ -4,7 +4,12 @@ use winnow::{
     combinator::{alt, repeat},
 };
 
-use crate::{custom_types::parse_custom_type, statements::parse_block, ws};
+use crate::{
+    custom_types::parse_custom_type_definition,
+    functions::{parse_function_definition, parse_function_impl},
+    statements::parse_block,
+    ws,
+};
 
 pub fn parse_top_levels(input: &mut &str) -> Result<Vec<TopLevel>> {
     repeat(0.., parse_top_level).parse_next(input)
@@ -12,10 +17,10 @@ pub fn parse_top_levels(input: &mut &str) -> Result<Vec<TopLevel>> {
 
 fn parse_top_level(input: &mut &str) -> Result<TopLevel> {
     alt((
-        parse_custom_type.map(TopLevel::CustomType),
+        parse_custom_type_definition.map(TopLevel::CustomType),
         parse_entrypoint.map(TopLevel::EntryPoint),
-        // parse_function_definition.map(TopLevel::FunctionDefinition),
-        // parse_function_impl.map(TopLevel::FunctionImplementation),
+        parse_function_definition.map(TopLevel::FunctionDefinition),
+        parse_function_impl.map(TopLevel::FunctionImplementation),
     ))
     .parse_next(input)
 }
@@ -38,19 +43,19 @@ mod tests {
         assert!(matches!(parsed, TopLevel::EntryPoint(_)));
     }
 
-    // #[test]
-    // fn test_parse_function_definition() {
-    //     let input = "my_func : U8 -> U8;";
-    //     let (_, parsed) = parse_top_level(input).unwrap();
-    //     assert!(matches!(parsed, TopLevel::FunctionDefinition(_)));
-    // }
+    #[test]
+    fn test_parse_function_definition() {
+        let mut input = "my_func(U8) -> U8;";
+        let parsed = parse_top_level(&mut input).unwrap();
+        assert!(matches!(parsed, TopLevel::FunctionDefinition(_)));
+    }
 
-    // #[test]
-    // fn test_parse_function_impl() {
-    //     let input = "my_func x = x;";
-    //     let (_, parsed) = parse_top_level(input).unwrap();
-    //     assert!(matches!(parsed, TopLevel::FunctionImplementation(_)));
-    // }
+    #[test]
+    fn test_parse_function_impl() {
+        let mut input = "my_func(x) = x;";
+        let parsed = parse_top_level(&mut input).unwrap();
+        assert!(matches!(parsed, TopLevel::FunctionImplementation(_)));
+    }
 
     #[test]
     fn test_parse_custom_type() {

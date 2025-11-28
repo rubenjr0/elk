@@ -15,7 +15,7 @@ use crate::{
 
 /// Custom types are defined as follows:
 /// `type CustomType { VariantA, VariantB }`
-pub fn parse_custom_type(input: &mut &str) -> Result<CustomType> {
+pub fn parse_custom_type_definition(input: &mut &str) -> Result<CustomType> {
     let _ = ws("type").parse_next(input)?;
     let name = ws(parse_identifier_upper).parse_next(input)?;
     let generics = opt(parse_custom_type_generics)
@@ -30,7 +30,7 @@ pub fn parse_custom_type(input: &mut &str) -> Result<CustomType> {
     Ok(CustomType::new(name, content, generics))
 }
 
-pub fn parse_custom_type_generics<'s>(input: &mut &'s str) -> Result<Vec<String>> {
+pub fn parse_custom_type_generics(input: &mut &str) -> Result<Vec<String>> {
     delimited(
         '(',
         separated(1.., parse_identifier_upper.map(ToOwned::to_owned), ws(',')),
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_parse_empty_custom_type() {
         let mut input = "type Phantom";
-        let parsed = super::parse_custom_type(&mut input).unwrap();
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "Phantom");
         assert_eq!(parsed.content(), None);
     }
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test_parse_custom_type_variants() {
         let mut input = "type CustomType { VariantA, VariantB, }";
-        let parsed = super::parse_custom_type(&mut input).unwrap();
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn test_parse_custom_type_generics() {
         let mut input = "type Option(T) { Some(T), None }";
-        let parsed = super::parse_custom_type(&mut input).unwrap();
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "Option");
         assert_eq!(
             parsed.content(),
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn test_parse_custom_type_record() {
         let mut input = "type CustomType { admin: Bool, age: U8, }";
-        let parsed = super::parse_custom_type(&mut input).unwrap();
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
