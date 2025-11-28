@@ -20,101 +20,49 @@ Inspired by Gleam, Rust, Elm, Haskell and Scala.
 - Cargo-like project manager
 - Decide function syntax
 
-## To think about
-### Functions
-- [ ] Sntax
-
-#### 1. Decoupled definition and implementations
+# Syntax
+## Functions
 Examples:
 ```
 // Inline
 sum(a: U8, b: U8) -> U8 = a + b;
+
 // Block
 sum(a: U8, b: U8) -> U8 {
   a + b
 }
+
 // Decoupled, multiple implementations
-sum(a: U8, b: U8) -> U8;
+sum(U8, b: U8) -> U8; // The "labels" are optional when defining the function!
 sum(a, 0) = a;
 sum(0, b) = b;
 sum(a, b) = a + b;
 
-is_origin : (U8, U8) -> Bool;
-is_origin (0, 0) = True;
-is_origin _ = False;
-
-some_func(arg1: U8, arg2: Option(U8)) -> U8;
-some_func(arg1, None) = arg1;
-some_func(arg1, Some(arg2)) = arg1 + arg2;
+is_origin((U8, U8)) -> Bool;
+is_origin((0, 0)) = True;
+is_origin(_) = False;
 ```
 
-#### 2. Decoupled definition, single implementation.
-Subset of the previous case.
-- Advantages: Arbitrary variable names. Simple.
-- Disadvantages: No pattern matching, no multiple implementations.
+### To think about
 
-Example:
-```
-is_origin : (U8, U8) -> Bool;
-is_origin x = match x {
-  (0, 0) -> True,
-  _ -> False
-}
-
-// same thing:
-is_origin2 : (U8, U8) -> Bool;
-is_origin2 x {
-  match x {
-    (0, 0) -> True,
-    _ -> False
-  }
-}
-```
-
-#### 3. Coupled definition and implementation
-- Advantages: Don't have to remember the order of the types. Simple.
-- Disadvantages: No pattern matching. No multiple implementations. No arbitrary variable names.
-
-Example:
-```
-// Decide the return type syntax, `:` or `->`?
-is_origin(x: (U8, U8)): Bool {
-  match x {
-    (0, 0) -> True,
-    _ -> False
-  }
-}
-
-square(x: U8): U8 = x * x;
-```
-
----
-
-- [x] Functions without arguments?
+#### Functions without arguments?
 
 ```
-my_fn : ReturnType;
-my_fn = 42;
+my_fn() -> ReturnType;
+my_fn -> ReturnType;
 ```
 
-- [x] Functions without return type?
+#### Functions without return type?
 
 ```
-my_fn : U8 -> Unit;
+my_fn(U8) -> Unit;
+my_fn(U8);
 my_fn x {
   print(x);
 }
 ```
 
-- [x] Function calling syntax?
-> Parentheses should *NOT* be mandatory all the time, just in some cases.
-
-```
-my_fn 42 37;
-my_fn (other_fn 42) 37;
-```
-
-### Matching and custom types
+## Matching and custom types
 Should all custom types (included those in the stdlib) be fully qualified? ie: `Option.None`
 
 Should all custom types (except those in the stdlib) be fully qualified? ie: Some, `MyType.Var1`
@@ -132,9 +80,9 @@ match my_val {
 Opinion: Maybe having everything fully qualified is better, although it's more verbose.
 
 
-### Side effects
+## Side effects
 *Idea:* Pure functions can't call impure functions, but impure functions can call pure functions.
-- [ ] Side effect handling? (Monads?, Something else?)
+- [ ] Side effect handling? (Monads?, keyword? Something else?)
 
 ### Monads
 A monad should implement the following functions:
@@ -147,13 +95,13 @@ A monad should implement the following functions:
 
 Example:
 ```
-type Option(A) = { None | Some(A) };
+type Option(A) = { None, Some(A) };
 
-Option.wrap : A -> Option(A);
-Option.map : Option(A) -> (A -> B) -> Option(B);
-Option.flat_map : Option(A) -> (A -> Option(B)) -> Option(B);
-Option.join : Option(Option(A)) -> Option(A);
-Option.unwrap : Option(A) -> A;
+Option.wrap(A) -> Option(A);
+Option.map(Option(A), f: (A -> B)) -> Option(B);
+Option.flat_map(Option(A), f: (A -> Option(B))) -> Option(B);
+Option.join(Option(Option(A))) -> Option(A);
+Option.unwrap(Option(A)) -> A;
 ```
 
-- [ ] Monad chaining syntax? like Haskell's `do` notation? Via the `|>` operator? Or using the `chain` function?
+- [ ] Monad chaining syntax? like Haskell's `do` notation? Via the `|>` operator? Or using a `chain` function?
