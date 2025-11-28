@@ -1,4 +1,4 @@
-use ast::expressions::{Expression, Literal, MatchArm, MatchBody};
+use ast::expressions::{BinaryOp, Expression, Literal, MatchArm, MatchBody, UnaryOp};
 use winnow::{
     Parser, Result,
     ascii::{alphanumeric0, dec_int, dec_uint, multispace1},
@@ -18,8 +18,8 @@ pub fn parse_expr(input: &mut &str) -> Result<Expression> {
         parse_enum_instance,
         parse_new_type_instance,
         parse_match,
-        // parse_binary_op,
-        // parse_unary_op,
+        parse_binary_op,
+        parse_unary_op,
         parse_literal,
         parse_field_access,
         parse_unit,
@@ -175,50 +175,53 @@ fn parse_match_body(input: &mut &str) -> Result<MatchBody> {
 }
 
 // /// Kinda same problem as `parse_function_call`
-// fn parse_binary_op(input: &str) -> IResult<&str, Expression> {
-//     let (input, left) = alt((
-//         parse_literal,
-//         parse_identifier_expr,
-//         delimited(tag("("), parse_function_call, tag(")")),
-//         delimited(tag("("), parse_binary_op, tag(")")),
-//     ))
-//     .parse(input)?;
-//     let (input, op) = ws(parse_binary_operator).parse(input)?;
-//     let (input, right) = parse_expr(input)?;
+fn parse_binary_op(input: &mut &str) -> Result<Expression> {
+    let left = alt((
+        parse_literal,
+        parse_identifier_expr,
+        delimited('(', parse_function_call, ')'),
+        delimited('(', parse_binary_op, ')'),
+    ))
+    .parse_next(input)?;
+    let op = ws(parse_binary_operator).parse_next(input)?;
+    let right = parse_expr(input)?;
 
-//     Ok((input, Expression::binary_op(left, op, right)))
-// }
+    Ok(Expression::binary_op(left, op, right))
+}
 
-// fn parse_binary_operator(input: &str) -> IResult<&str, BinaryOp> {
-//     alt((
-//         value(BinaryOp::Add, tag("+")),
-//         value(BinaryOp::Sub, tag("-")),
-//         value(BinaryOp::Mul, tag("*")),
-//         value(BinaryOp::Div, tag("/")),
-//         value(BinaryOp::Mod, tag("%")),
-//         value(BinaryOp::And, tag("&&")),
-//         value(BinaryOp::Or, tag("||")),
-//         value(BinaryOp::Eq, tag("==")),
-//         value(BinaryOp::NotEq, tag("!=")),
-//         value(BinaryOp::Greater, tag(">")),
-//         value(BinaryOp::GreaterEq, tag(">=")),
-//         value(BinaryOp::Less, tag("<")),
-//         value(BinaryOp::LessEq, tag("<=")),
-//     ))
-//     .parse(input)
-// }
+// TODO: Can probably use sth other than alt, dispatch?
+fn parse_binary_operator(input: &mut &str) -> Result<BinaryOp> {
+    alt((
+        '+'.map(|_| BinaryOp::Add),
+        '-'.map(|_| BinaryOp::Sub),
+        '*'.map(|_| BinaryOp::Mul),
+        '/'.map(|_| BinaryOp::Div),
+        '%'.map(|_| BinaryOp::Mod),
+        "&&".map(|_| BinaryOp::And),
+        "||".map(|_| BinaryOp::Or),
+        "==".map(|_| BinaryOp::Eq),
+        "!=".map(|_| BinaryOp::NotEq),
+        '>'.map(|_| BinaryOp::Greater),
+        ">=".map(|_| BinaryOp::GreaterEq),
+        '<'.map(|_| BinaryOp::Less),
+        "<=".map(|_| BinaryOp::LessEq),
+    ))
+    .parse_next(input)
+}
 
-// fn parse_unary_op(input: &str) -> IResult<&str, Expression> {
-//     let (input, op) = parse_unary_operator(input)?;
-//     let (input, operand) = alt((parse_literal, parse_identifier_expr)).parse(input)?;
-
-//     Ok((input, Expression::unary_op(op, operand)))
-// }
+fn parse_unary_op(input: &mut &str) -> Result<Expression> {
+    (
+        parse_unary_operator,
+        alt((parse_literal, parse_identifier_expr)),
+    )
+        .map(|(op, expr)| Expression::unary_op(op, expr))
+        .parse_next(input)
+}
 
 // /// TODO: Add more operators (?)
-// fn parse_unary_operator(input: &str) -> IResult<&str, UnaryOp> {
-//     value(UnaryOp::Negate, tag("¬")).parse(input)
-// }
+fn parse_unary_operator(input: &mut &str) -> Result<UnaryOp> {
+    '!'.map(|_| UnaryOp::Negate).parse_next(input)
+}
 
 #[cfg(test)]
 mod tests {
