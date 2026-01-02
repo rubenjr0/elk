@@ -35,18 +35,18 @@ impl FromStr for Type {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let t = match s {
-            "U8" => Type::U8,
-            "U16" => Type::U16,
-            "U32" => Type::U32,
-            "U64" => Type::U64,
-            "I8" => Type::I8,
-            "I16" => Type::I16,
-            "I32" => Type::I32,
-            "I64" => Type::I64,
-            "F32" => Type::F32,
-            "F64" => Type::F64,
-            "Bool" => Type::Bool,
-            "String" => Type::String,
+            "U8" => Self::U8,
+            "U16" => Self::U16,
+            "U32" => Self::U32,
+            "U64" => Self::U64,
+            "I8" => Self::I8,
+            "I16" => Self::I16,
+            "I32" => Self::I32,
+            "I64" => Self::I64,
+            "F32" => Self::F32,
+            "F64" => Self::F64,
+            "Bool" => Self::Bool,
+            "String" => Self::String,
             _ => Err("Invalid type")?,
         };
         Ok(t)

@@ -45,7 +45,7 @@ impl CustomType {
         self.content.as_ref()
     }
 
-    pub fn get_record_fields(&self) -> Option<&Vec<Field>> {
+    pub const fn get_record_fields(&self) -> Option<&Vec<Field>> {
         if let Some(CustomTypeContent::Record(fields)) = &self.content {
             Some(fields)
         } else {
@@ -53,7 +53,7 @@ impl CustomType {
         }
     }
 
-    pub fn get_enum_variants(&self) -> Option<&Vec<(u8, Variant)>> {
+    pub const fn get_enum_variants(&self) -> Option<&Vec<(u8, Variant)>> {
         if let Some(CustomTypeContent::Enum(variants)) = &self.content {
             Some(variants)
         } else {
@@ -91,7 +91,7 @@ impl Field {
         &self.name
     }
 
-    pub fn ty(&self) -> &Type {
+    pub const fn ty(&self) -> &Type {
         &self.ty
     }
 }
