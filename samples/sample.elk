@@ -1,18 +1,29 @@
-type Flavor {
-    Orange
-    , Apple
+// Type definition
+type Option<A> {
+    None,
+    Some(A)
 }
 
-type Person {
-    name: String
-    , age: U8
-    , favorite_flavor: Flavor
+// Namespaces, Option
+Option::is_some(Self<A>) -> Bool;
+Option::is_some(Self.None) = False;
+Option::is_some(_) = True;
+
+// More complex functions
+Option::bind<A>(x: A) -> Self<A> = Self.Some(x);
+Option::map<B>(Self<A>, (A) -> B) -> Self<B>;
+map<A, B>([A], f: (A) -> B) -> [B];
+
+Option::map<B>(self: Self<A>, f: (A) -> B) -> Self<B> {
+    match self {
+        Self.None    => Self.None,
+        Self.Some(x) => Self.Some(f(x))
+    }
 }
 
-does_like : Person -> Flavor -> Bool;
-does_like person flavor = True;
+some_f(x: U32) -> U32 = -x * 2;
 
 main {
-    alice = Person { name = "Alice", age = 25, favorite_flavor = Flavor.Orange };
-    likes = does_like alice Flavor.Orange;
+    var = Option::bind(123);
+    var2 = map(var, double);
 }
