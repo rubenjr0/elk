@@ -18,19 +18,19 @@ Type = { TypeIdentifier ~ TypeVariablesDef? | FunctionSignature | ("[" ~ Type ~ 
 // Functions
 FunctionNamespace = @{ (TypeIdentifier ~ "::")? ~ Identifier }
 FunctionHeader    =  { FunctionNamespace ~ TypeVariablesDef? }
-FunctionSignature =  { FunctionDefParameterList ~ "->" ~ Type }
+FunctionSignature =  { "(" ~ FunctionDefParameterList ~ ")" ~ "->" ~ Type }
 
 FunctionDef  = { FunctionHeader ~ FunctionSignature ~ (FunctionBody | ";") }
-FunctionImpl = { FunctionHeader ~ FunctionImplParameterList ~ FunctionBody }
-FunctionCall = { FunctionHeader ~ FunctionCallParameterList }
+FunctionImpl = { FunctionHeader ~ "(" ~ FunctionImplParameterList ~ ")" ~ FunctionBody }
+FunctionCall = { FunctionHeader ~ "(" ~ FunctionCallParameterList ~ ")" }
 
 FunctionBody   = { FunctionInline | FunctionBlock }
 FunctionInline = { "=" ~ Expr ~ ";" }
 FunctionBlock  = { "{" ~ Statement* ~ Expr? ~ "}" }
 
-FunctionDefParameterList  = { "(" ~ FunctionDefParameter ~ ("," ~ FunctionDefParameter)* ~ ","? ~ ")" }
-FunctionImplParameterList = { "(" ~ FunctionParameter ~ ("," ~ FunctionParameter)* ~ ","? ~ ")" }
-FunctionCallParameterList = { "(" ~ Expr ~ ("," ~ Expr)* ~ ","? ~ ")" }
+FunctionDefParameterList  = _{ FunctionDefParameter ~ ("," ~ FunctionDefParameter)* ~ ","? }
+FunctionImplParameterList = _{ FunctionParameter ~ ("," ~ FunctionParameter)* ~ ","? }
+FunctionCallParameterList = _{ Expr ~ ("," ~ Expr)* ~ ","? }
 
 FunctionDefParameter = { (Identifier ~ ":")? ~ Type }
 FunctionParameter    = { Identifier | Expr }
