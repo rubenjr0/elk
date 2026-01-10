@@ -47,7 +47,7 @@ fn parse_identifier_expr(input: &mut &str) -> Result<Expression> {
 }
 
 fn parse_unit(input: &mut &str) -> Result<Expression> {
-    "Unit".parse_next(input).map(|_| Expression::unit())
+    "Unit".parse_next(input).map(|_| Expression::void())
 }
 
 // TODO: Escaped strings and so on
@@ -298,10 +298,10 @@ mod tests {
 
     #[test]
     fn test_parse_unit() {
-        let mut input = "Unit";
+        let mut input = "Void";
         let expr = parse_expr(&mut input).unwrap();
 
-        assert_eq!(expr, Expression::unit());
+        assert_eq!(expr, Expression::void());
     }
 
     #[test]

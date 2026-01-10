@@ -24,9 +24,7 @@ FunctionDef  = { FunctionHeader ~ FunctionSignature ~ (FunctionBody | ";") }
 FunctionImpl = { FunctionHeader ~ "(" ~ FunctionImplParameterList ~ ")" ~ FunctionBody }
 FunctionCall = { FunctionHeader ~ "(" ~ FunctionCallParameterList ~ ")" }
 
-FunctionBody   = { FunctionInline | FunctionBlock }
-FunctionInline = { "=" ~ Expr ~ ";" }
-FunctionBlock  = { "{" ~ Statement* ~ Expr? ~ "}" }
+FunctionBody = { "=" ~ Expr ~ ";" }
 
 FunctionDefParameterList  = _{ FunctionDefParameter ~ ("," ~ FunctionDefParameter)* ~ ","? }
 FunctionImplParameterList = _{ FunctionParameter ~ ("," ~ FunctionParameter)* ~ ","? }
@@ -52,13 +50,14 @@ TypeIdentifier = @{ ASCII_ALPHA_UPPER ~ ("_" | ASCII_ALPHANUMERIC)* }
 // Expressions
 // ==========================================
 Primary      = _{ Literal | FunctionCall | Identifier | "(" ~ Expr ~ ")" }
-Expr         =  { Logical | Literal | MatchBlock | StructAccess | Identifier | NewTypeInstance }
+Expr         =  { Logical | Literal | MatchBlock | StructAccess | Identifier | NewTypeInstance | Block }
 Literal      = @{ Boolean | Number | "Void" }
 Number       = @{ Float | Integer }
 Boolean      = @{ "True" | "False" }
 Integer      = @{ ASCII_DIGIT+ }
 Float        = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
 StructAccess = @{ Identifier ~ "." ~ Identifier }
+Block        =  { "{" ~ Statement* ~ Expr ~ "}" }
 
 // Operations and operators
 Unary   = { UnaryOp ~ Unary | Primary }

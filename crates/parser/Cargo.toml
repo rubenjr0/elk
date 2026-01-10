@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 ast = { path = "../ast" }
+pest = "2.8.4"
+pest_derive = "2.8.4"
 winnow = "0.7.13"

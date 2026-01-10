@@ -112,14 +112,14 @@ mod tests {
 
     #[test]
     fn test_parse_basic_function_impl() {
-        let mut input = "my_function(_x) = Unit;";
+        let mut input = "my_function(_x) = Void;";
         let function_impl = parse_function_impl(&mut input).unwrap();
 
         assert_eq!(function_impl.name(), "my_function");
         assert_eq!(function_impl.arguments(), &["_x"]);
         assert_eq!(
             function_impl.body(),
-            &FunctionBody::SingleLine(Expression::unit())
+            &FunctionBody::SingleLine(Expression::void())
         );
     }
 
