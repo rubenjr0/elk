@@ -31,7 +31,7 @@ pub enum ExpressionKind {
     Match(Box<Expression>, Vec<MatchArm>),
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     UnaryOp(UnaryOp, Box<Expression>),
-    Unit,
+    Void,
 }
 
 impl Expression {
@@ -54,10 +54,10 @@ impl Expression {
         self.associated_type = Some(ty)
     }
 
-    pub const fn unit() -> Self {
+    pub const fn void() -> Self {
         Self {
-            kind: ExpressionKind::Unit,
-            associated_type: Some(AssociatedType::Concrete(Type::Unit)),
+            kind: ExpressionKind::Void,
+            associated_type: Some(AssociatedType::Concrete(Type::Void)),
         }
     }
 
