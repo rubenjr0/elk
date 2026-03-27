@@ -1,9 +1,10 @@
 use ast::expressions::{BinaryOp, Expression, Literal, MatchArm, MatchBody, UnaryOp};
 use winnow::{
     Parser, Result,
-    ascii::{alphanumeric0, dec_int, dec_uint, multispace1},
-    combinator::{alt, delimited, opt, separated, separated_pair, terminated},
+    ascii::{dec_uint, hex_uint, multispace1},
+    combinator::{alt, delimited, opt, preceded, repeat, separated, separated_pair, terminated},
     error::ContextError,
+    token::{any, none_of, take_while},
 };
 
 use crate::{
@@ -33,10 +34,52 @@ fn parse_literal(input: &mut &str) -> Result<Expression> {
     alt((
         parse_bool.map(Literal::Bool),
         parse_string.map(Literal::String),
-        dec_uint::<&str, u32, ContextError>.map(Literal::int),
-        dec_int::<&str, i32, ContextError>.map(Literal::int),
+        // Float before integer: "1.5" must not be consumed as "1" then fail on ".5"
+        parse_float.map(Literal::float),
+        // Prefixed integers before plain integer: "0x1f" must not be consumed as "0"
+        parse_hex_int.map(Literal::int),
+        parse_bin_int.map(Literal::int),
+        parse_oct_int.map(Literal::int),
+        dec_uint::<&str, u128, ContextError>.map(Literal::int),
     ))
     .map(Expression::literal)
+    .parse_next(input)
+}
+
+fn parse_float(input: &mut &str) -> Result<f64> {
+    // Require a decimal point so plain integers don't match as floats.
+    // Non-negative: unary minus handles negation in expressions.
+    (
+        take_while(1.., |c: char| c.is_ascii_digit()),
+        '.',
+        take_while(1.., |c: char| c.is_ascii_digit()),
+    )
+        .take()
+        .map(|s: &str| s.parse::<f64>().unwrap())
+        .parse_next(input)
+}
+
+fn parse_hex_int(input: &mut &str) -> Result<u128> {
+    preceded(alt(("0x", "0X")), hex_uint::<_, u64, _>)
+        .map(u128::from)
+        .parse_next(input)
+}
+
+fn parse_bin_int(input: &mut &str) -> Result<u128> {
+    preceded(
+        alt(("0b", "0B")),
+        take_while(1.., |c: char| c == '0' || c == '1'),
+    )
+    .map(|s: &str| u128::from(u64::from_str_radix(s, 2).unwrap()))
+    .parse_next(input)
+}
+
+fn parse_oct_int(input: &mut &str) -> Result<u128> {
+    preceded(
+        alt(("0o", "0O")),
+        take_while(1.., |c: char| ('0'..'7').contains(&c)),
+    )
+    .map(|s: &str| u128::from(u64::from_str_radix(s, 8).unwrap()))
     .parse_next(input)
 }
 
@@ -47,14 +90,26 @@ fn parse_identifier_expr(input: &mut &str) -> Result<Expression> {
 }
 
 fn parse_unit(input: &mut &str) -> Result<Expression> {
-    "Unit".parse_next(input).map(|_| Expression::void())
+    ("(", ws(")")).parse_next(input).map(|_| Expression::void())
 }
 
-// TODO: Escaped strings and so on
 fn parse_string(input: &mut &str) -> Result<String> {
-    delimited('"', alphanumeric0, '"')
-        .parse_next(input)
-        .map(|s| s.to_owned())
+    delimited('"', repeat(0.., parse_string_char), '"').parse_next(input)
+}
+
+fn parse_string_char(input: &mut &str) -> Result<char> {
+    alt((
+        preceded('\\', any).map(|c: char| match c {
+            '"' => '"',
+            '\\' => '\\',
+            'n' => '\n',
+            't' => '\t',
+            'r' => '\r',
+            other => other,
+        }),
+        none_of(['"', '\\']),
+    ))
+    .parse_next(input)
 }
 
 fn parse_bool(input: &mut &str) -> Result<bool> {
@@ -218,9 +273,8 @@ fn parse_unary_op(input: &mut &str) -> Result<Expression> {
         .parse_next(input)
 }
 
-// /// TODO: Add more operators (?)
 fn parse_unary_operator(input: &mut &str) -> Result<UnaryOp> {
-    '!'.map(|_| UnaryOp::Negate).parse_next(input)
+    alt(('-', '!')).map(|_| UnaryOp::Negate).parse_next(input)
 }
 
 #[cfg(test)]
@@ -271,10 +325,13 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_literal_i8() {
+    fn test_parse_literal_negative() {
         let mut input = "-37";
         let expr = parse_expr(&mut input).unwrap();
-        assert_eq!(expr, Expression::literal(Literal::int(-37)));
+        assert_eq!(
+            expr,
+            Expression::unary_op(UnaryOp::Negate, Expression::literal(Literal::int(37)))
+        );
     }
 
     #[test]
@@ -298,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_parse_unit() {
-        let mut input = "Void";
+        let mut input = "()";
         let expr = parse_expr(&mut input).unwrap();
 
         assert_eq!(expr, Expression::void());

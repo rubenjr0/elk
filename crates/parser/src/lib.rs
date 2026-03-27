@@ -2,6 +2,8 @@ use pest_derive::Parser;
 use winnow::{Parser as Pw, ascii::multispace0, combinator::delimited, error::ParserError};
 
 mod custom_types;
+#[cfg(test)]
+mod pest_tests;
 pub mod expressions;
 mod functions;
 mod identifiers;
@@ -18,7 +20,7 @@ where
 }
 
 #[derive(Parser)]
-#[grammar = "../../../grammar.pest"]
+#[grammar = "../../../grammar_optimized.pest"]
 struct Grammar;
 
 #[cfg(test)]
