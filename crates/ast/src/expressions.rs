@@ -128,19 +128,19 @@ impl Expression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
-    Integer(u64),
+    Integer(u128),
     Float(f64),
     Bool(bool),
     String(String),
 }
 
 impl Literal {
-    pub fn int<T: TryInto<u64, Error = impl Debug>>(val: T) -> Self {
-        Self::Integer(val.try_into().unwrap())
+    pub fn int(val: u128) -> Self {
+        Self::Integer(val)
     }
 
-    pub fn float<T: TryInto<f64, Error = impl Debug>>(val: T) -> Self {
-        Self::Float(val.try_into().unwrap())
+    pub fn float<T: Into<f64>>(val: T) -> Self {
+        Self::Float(val.into())
     }
 }
 

@@ -63,7 +63,7 @@ impl Codegen {
 
 fn gen_literal(lit: &Literal, ty: &Type, builder: &mut FunctionBuilder) -> Value {
     match lit {
-        Literal::Integer(v) => builder.ins().iconst(ty.to_cranelift(), *v as i64),
+        Literal::Integer(v) => builder.ins().iconst(ty.to_cranelift(), *v as i64), // u128 → i64 narrowing at codegen; type checker ensures it fits
         Literal::Float(v) => match ty {
             Type::F32 => builder.ins().f32const(*v as f32),
             Type::F64 => builder.ins().f64const(*v),
