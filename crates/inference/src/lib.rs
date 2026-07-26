@@ -12,7 +12,7 @@ pub struct TypeInference {
     variables: BTreeMap<String, Type>,
     types: Vec<CustomType>,
     functions: BTreeMap<String, FunctionSignature>,
-    constraints: Vec<Constraint>,
+    _constraints: Vec<Constraint>,
 }
 
 struct Constraint;
@@ -21,7 +21,7 @@ impl TypeInference {
     pub fn infer_program(&mut self, program: &mut Program) {
         for fd in &program.function_declarations {
             self.functions
-                .insert(fd.name().to_owned(), fd.signature().to_owned());
+                .insert(fd.qualified_name().qualified(), fd.signature().to_owned());
         }
 
         for a in &program.type_definitions {
@@ -56,11 +56,17 @@ impl TypeInference {
             ExpressionKind::BinaryOp(lhs, _, rhs) => self.infer_binary_op(lhs, rhs),
             ExpressionKind::UnaryOp(_, expr) => self.infer_expr(expr),
             ExpressionKind::Unit => Type::Unit,
-            ExpressionKind::FunctionCall(name, _) => self
-                .functions
-                .get(name)
-                .map(|s| s.return_type().to_owned())
-                .unwrap(),
+            ExpressionKind::FunctionCall {
+                namespace, name, ..
+            } => {
+                let qualified = namespace
+                    .as_ref()
+                    .map_or_else(|| name.clone(), |ns| format!("{ns}::{name}"));
+                self.functions
+                    .get(&qualified)
+                    .map(|s| s.return_type().to_owned())
+                    .unwrap()
+            }
             ExpressionKind::Match(expr, arms) => self.infer_match(expr, arms),
             ExpressionKind::NewRecordInstance(type_name, fields) => {
                 self.infer_new_record_instance(type_name, fields)
@@ -87,9 +93,9 @@ impl TypeInference {
         self.infer_expr(expr);
         let arms: Vec<_> = arms
             .iter()
-            .filter_map(|arm| match &arm.body {
-                MatchBody::Block(block) => Some(block.return_expr.associated_type.to_owned()),
-                MatchBody::Expr(expr) => Some(expr.associated_type.to_owned()),
+            .map(|arm| match &arm.body {
+                MatchBody::Block(block) => block.return_expr.associated_type.to_owned(),
+                MatchBody::Expr(expr) => expr.associated_type.to_owned(),
             })
             .collect();
         if arms.iter().all(|x| x == &arms[0]) {

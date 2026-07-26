@@ -14,7 +14,7 @@ impl Codegen {
                     let ty = expression.get_type().unwrap();
                     let val = self.gen_expression(expression, builder);
                     let var = self.declare_variable(var_name, ty.to_owned());
-                    builder.declare_var(var, ty.to_cranelift());
+                    builder.declare_var(ty.to_cranelift());
                     builder.def_var(var, val);
                 }
                 Statement::Return(expr) => {

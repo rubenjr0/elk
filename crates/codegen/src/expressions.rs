@@ -21,9 +21,9 @@ impl Codegen {
                 builder.use_var(*var)
             }
             ExpressionKind::BinaryOp(lhs, op, rhs) => self.gen_binary_op(lhs, rhs, op, builder),
-            ExpressionKind::FunctionCall(function_name, args) => {
-                self.gen_function_call(function_name, args, builder)
-            }
+            ExpressionKind::FunctionCall {
+                name, arguments, ..
+            } => self.gen_function_call(name, arguments, builder),
             ExpressionKind::Unit => builder.ins().iconst(types::I32, 0),
             ExpressionKind::NewRecordInstance(record_name, fields) => {
                 self.gen_new_record_instance(record_name, fields, builder)
