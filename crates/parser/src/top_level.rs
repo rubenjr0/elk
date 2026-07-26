@@ -8,6 +8,7 @@ use winnow::{
 use crate::{
     custom_types::parse_custom_type_definition,
     functions::{parse_function_definition, parse_function_impl},
+    keyword,
     statements::parse_block,
     ws,
 };
@@ -26,7 +27,7 @@ fn parse_top_level(input: &mut &str) -> Result<TopLevel> {
         parse_custom_type_definition
             .context(StrContext::Label("CustomType"))
             .map(TopLevel::CustomType),
-        preceded(ws("main"), parse_block)
+        preceded(ws(keyword("main")), parse_block)
             .context(StrContext::Label("EntryPoint"))
             .map(TopLevel::EntryPoint),
         parse_function_definition

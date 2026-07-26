@@ -1,12 +1,15 @@
-use pest_derive::Parser;
-use winnow::{Parser as Pw, ascii::multispace0, combinator::delimited, error::ParserError};
+use winnow::{
+    Parser as Pw, ascii::multispace0,
+    combinator::{delimited, not, peek, terminated},
+    error::ParserError,
+    token::one_of,
+};
 
 mod custom_types;
-#[cfg(test)]
-mod pest_tests;
 pub mod expressions;
 mod functions;
 mod identifiers;
+mod patterns;
 pub mod program;
 mod statements;
 mod top_level;
@@ -19,20 +22,13 @@ where
     delimited(multispace0, inner, multispace0)
 }
 
-#[derive(Parser)]
-#[grammar = "../../../grammar_optimized.pest"]
-struct Grammar;
-
-#[cfg(test)]
-mod tests {
-    use pest::Parser;
-
-    use super::*;
-
-    #[test]
-    fn sample_test() {
-        let input = include_str!("../../../samples/sample.elk");
-        let result = Grammar::parse(Rule::Program, input);
-        result.expect("Failed to parse input");
-    }
+/// A literal keyword that must not be immediately followed by an identifier
+/// character, so e.g. `returnfoo` doesn't parse as `return foo`.
+pub fn keyword<'a, E: ParserError<&'a str>>(
+    lit: &'static str,
+) -> impl Pw<&'a str, &'a str, E> {
+    terminated(
+        lit,
+        peek(not(one_of(|c: char| c.is_alphanumeric() || c == '_'))),
+    )
 }

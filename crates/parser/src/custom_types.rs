@@ -9,6 +9,7 @@ use winnow::{
 
 use crate::{
     identifiers::{parse_identifier_lower, parse_identifier_upper},
+    keyword,
     types::parse_type,
     ws,
 };
@@ -16,7 +17,7 @@ use crate::{
 /// Custom types are defined as follows:
 /// `type CustomType { VariantA, VariantB }`
 pub fn parse_custom_type_definition(input: &mut &str) -> Result<CustomType> {
-    let _ = ws("type").parse_next(input)?;
+    let _ = ws(keyword("type")).parse_next(input)?;
     let name = ws(parse_identifier_upper).parse_next(input)?;
     let generics = opt(parse_custom_type_generics)
         .parse_next(input)?
@@ -30,11 +31,14 @@ pub fn parse_custom_type_definition(input: &mut &str) -> Result<CustomType> {
     Ok(CustomType::new(name, content, generics))
 }
 
+/// Generic parameters/arguments in angle brackets: `<A>`, `<A, B>`.
+/// Used for both type definitions (`type Option<A>`), type references
+/// (`Option<A>`), and function type-variable definitions (`map<A, B>(...)`).
 pub fn parse_custom_type_generics(input: &mut &str) -> Result<Vec<String>> {
     delimited(
-        '(',
+        '<',
         separated(1.., parse_identifier_upper.map(ToOwned::to_owned), ws(',')),
-        ')',
+        '>',
     )
     .parse_next(input)
 }
@@ -111,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_parse_custom_type_generics() {
-        let mut input = "type Option(T) { Some(T), None }";
+        let mut input = "type Option<A> { Some(A), None }";
         let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "Option");
         assert_eq!(
@@ -119,7 +123,7 @@ mod tests {
             Some(&CustomTypeContent::Enum(vec![
                 (
                     0,
-                    Variant::new("Some", vec![Type::Custom("T".to_owned(), vec![])])
+                    Variant::new("Some", vec![Type::Custom("A".to_owned(), vec![])])
                 ),
                 (1, Variant::new("None", vec![])),
             ]))

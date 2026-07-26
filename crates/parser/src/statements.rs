@@ -1,10 +1,10 @@
 use ast::statements::{Block, Statement};
 use winnow::{
     Parser, Result,
-    combinator::{alt, delimited, repeat, terminated},
+    combinator::{alt, delimited, opt, repeat, terminated},
 };
 
-use crate::{expressions::parse_expr, identifiers::parse_identifier_lower, ws};
+use crate::{expressions::parse_expr, identifiers::parse_identifier_lower, keyword, ws};
 
 pub fn parse_block(input: &mut &str) -> Result<Block> {
     delimited(ws('{'), parse_block_content, ws('}')).parse_next(input)
@@ -12,10 +12,11 @@ pub fn parse_block(input: &mut &str) -> Result<Block> {
 
 fn parse_block_content(input: &mut &str) -> Result<Block> {
     let statements = parse_statements(input)?;
-    if let Ok(return_expr) = parse_expr(input) {
-        Ok(Block::new(statements, return_expr))
-    } else {
-        Ok(Block::new_without_return(statements))
+    // NOTE: `opt` (not `if let Ok(...)`) — it resets the input when the
+    // expression parser fails, so the closing `}` is left unconsumed.
+    match opt(parse_expr).parse_next(input)? {
+        Some(return_expr) => Ok(Block::new(statements, return_expr)),
+        None => Ok(Block::new_without_return(statements)),
     }
 }
 
@@ -39,7 +40,7 @@ fn parse_assign_statement(input: &mut &str) -> Result<Statement> {
 }
 
 fn parse_return_statement(input: &mut &str) -> Result<Statement> {
-    let _ = ws("return").parse_next(input)?;
+    let _ = ws(keyword("return")).parse_next(input)?;
     let expr = parse_expr(input)?;
     Ok(Statement::Return(expr))
 }
@@ -125,3 +126,15 @@ fn parse_return_statement(input: &mut &str) -> Result<Statement> {
 //         assert_eq!(block, Block::new_without_return(vec![]));
 //     }
 // }
+
+#[cfg(test)]
+mod regression_tests {
+    use super::*;
+
+    #[test]
+    fn test_return_keyword_boundary() {
+        // Regression: `returnfoo;` used to parse as `return foo`.
+        let mut input = "returnfoo;";
+        assert!(parse_statement(&mut input).is_err());
+    }
+}
