@@ -5,16 +5,16 @@ use super::{
     types::{FunctionSignature, Type},
 };
 
-/// A possibly namespaced function name: `map` or `Option::map`.
+/// A qualified function name: `map` or `Option::map`.
 ///
-/// Grammar reference: `FunctionNamespace = (TypeIdentifier "::")? Identifier`
+/// Grammar reference: `QualifiedName = (TypeIdentifier "::")? Identifier`
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionPath {
+pub struct QualifiedName {
     pub namespace: Option<String>,
     pub name: String,
 }
 
-impl FunctionPath {
+impl QualifiedName {
     pub fn new(namespace: Option<String>, name: &str) -> Self {
         Self {
             namespace,
@@ -36,7 +36,7 @@ impl FunctionPath {
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
-    path: FunctionPath,
+    name: QualifiedName,
     /// Declared type variables, e.g. `<A, B>` in `map<A, B>([A], f: (A) -> B) -> [B];`
     type_params: Vec<String>,
     signature: FunctionSignature,
@@ -44,7 +44,7 @@ pub struct FunctionDeclaration {
 
 #[derive(Debug, Clone)]
 pub struct FunctionImplementation {
-    path: FunctionPath,
+    name: QualifiedName,
     arguments: Vec<Pattern>,
     body: FunctionBody,
 }
@@ -56,9 +56,13 @@ pub enum FunctionBody {
 }
 
 impl FunctionDeclaration {
-    pub const fn new(path: FunctionPath, type_params: Vec<String>, signature: FunctionSignature) -> Self {
+    pub const fn new(
+        name: QualifiedName,
+        type_params: Vec<String>,
+        signature: FunctionSignature,
+    ) -> Self {
         Self {
-            path,
+            name,
             type_params,
             signature,
         }
@@ -66,18 +70,18 @@ impl FunctionDeclaration {
 
     pub fn main(ty: &Type) -> Self {
         Self {
-            path: FunctionPath::unqualified("main"),
+            name: QualifiedName::unqualified("main"),
             type_params: vec![],
             signature: FunctionSignature::new(vec![], ty.to_owned()),
         }
     }
 
-    pub const fn path(&self) -> &FunctionPath {
-        &self.path
+    pub const fn qualified_name(&self) -> &QualifiedName {
+        &self.name
     }
 
     pub fn name(&self) -> &str {
-        &self.path.name
+        &self.name.name
     }
 
     pub fn type_params(&self) -> &[String] {
@@ -90,9 +94,9 @@ impl FunctionDeclaration {
 }
 
 impl FunctionImplementation {
-    pub const fn new(path: FunctionPath, arguments: Vec<Pattern>, body: FunctionBody) -> Self {
+    pub const fn new(name: QualifiedName, arguments: Vec<Pattern>, body: FunctionBody) -> Self {
         Self {
-            path,
+            name,
             arguments,
             body,
         }
@@ -101,18 +105,18 @@ impl FunctionImplementation {
     pub fn main(block: &Block) -> Self {
         let body = FunctionBody::MultiLine(block.clone());
         Self {
-            path: FunctionPath::unqualified("main"),
+            name: QualifiedName::unqualified("main"),
             arguments: vec![],
             body,
         }
     }
 
-    pub const fn path(&self) -> &FunctionPath {
-        &self.path
+    pub const fn qualified_name(&self) -> &QualifiedName {
+        &self.name
     }
 
     pub fn name(&self) -> &str {
-        &self.path.name
+        &self.name.name
     }
 
     pub fn arguments(&self) -> &[Pattern] {
