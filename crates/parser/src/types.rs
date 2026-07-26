@@ -15,7 +15,24 @@ pub fn parse_type(input: &mut &str) -> Result<Type> {
 }
 
 pub fn parse_primitive_type(input: &mut &str) -> Result<Type> {
-    alphanumeric1.parse_to().parse_next(input)
+    alphanumeric1
+        .verify_map(|s: &str| match s {
+            "I8" => Some(Type::I8),
+            "I16" => Some(Type::I16),
+            "I32" => Some(Type::I32),
+            "I64" => Some(Type::I64),
+            "U8" => Some(Type::U8),
+            "U16" => Some(Type::U16),
+            "U32" => Some(Type::U32),
+            "U64" => Some(Type::U64),
+            "F32" => Some(Type::F32),
+            "F64" => Some(Type::F64),
+            "Bool" => Some(Type::Bool),
+            "String" => Some(Type::String),
+            "Unit" => Some(Type::Unit),
+            _ => None,
+        })
+        .parse_next(input)
 }
 
 pub fn parse_custom_type(input: &mut &str) -> Result<Type> {
@@ -34,7 +51,7 @@ mod tests {
     fn test_parse_primitive_type() {
         let mut input = "U8";
 
-        let (_, parsed) = parse_primitive_type.parse_peek(&mut input).unwrap();
+        let (_, parsed) = parse_primitive_type.parse_peek(input).unwrap();
         assert_eq!(parsed, Type::U8);
 
         let parsed = parse_type(&mut input).unwrap();
@@ -46,7 +63,7 @@ mod tests {
         let mut input = "CustomType";
         let expected = Type::Custom("CustomType".to_owned(), vec![]);
 
-        let (_, parsed) = parse_custom_type.parse_peek(&mut input).unwrap();
+        let (_, parsed) = parse_custom_type.parse_peek(input).unwrap();
         assert_eq!(parsed, expected);
 
         let parsed = parse_type(&mut input).unwrap();
@@ -55,10 +72,10 @@ mod tests {
 
     #[test]
     fn test_parse_type_custom_with_generics() {
-        let mut input = "Option(T)";
-        let expected = Type::Custom("Option".to_owned(), vec!["T".to_owned()]);
+        let mut input = "Option<A>";
+        let expected = Type::Custom("Option".to_owned(), vec!["A".to_owned()]);
 
-        let (_, parsed) = parse_custom_type.parse_peek(&mut input).unwrap();
+        let (_, parsed) = parse_custom_type.parse_peek(input).unwrap();
         assert_eq!(parsed, expected);
 
         let parsed = parse_type(&mut input).unwrap();
