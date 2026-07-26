@@ -27,7 +27,7 @@ impl Block {
     pub const fn new_without_return(statements: Vec<Statement>) -> Self {
         Self {
             statements,
-            return_expr: Expression::void(),
+            return_expr: Expression::unit(),
         }
     }
 

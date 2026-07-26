@@ -27,7 +27,7 @@ pub enum Type {
     Function(FunctionSignature),
 
     // Special types
-    Void,
+    Unit,
 }
 
 impl FromStr for Type {
@@ -47,7 +47,7 @@ impl FromStr for Type {
             "F64" => Self::F64,
             "Bool" => Self::Bool,
             "String" => Self::String,
-            "Void" => Self::Void,
+            "Unit" => Self::Unit,
             _ => Err("Invalid type")?,
         };
         Ok(t)

@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::{statements::Block, types::Type};
+use super::{patterns::Pattern, statements::Block, types::Type};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
@@ -27,11 +27,15 @@ pub enum ExpressionKind {
     /// Identifier, Field
     /// Example: `my_val.my_field`
     RecordAccess(String, String),
-    FunctionCall(String, Vec<Expression>),
+    FunctionCall {
+        namespace: Option<String>,
+        name: String,
+        arguments: Vec<Expression>,
+    },
     Match(Box<Expression>, Vec<MatchArm>),
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     UnaryOp(UnaryOp, Box<Expression>),
-    Void,
+    Unit,
 }
 
 impl Expression {
@@ -54,10 +58,10 @@ impl Expression {
         self.associated_type = Some(ty)
     }
 
-    pub const fn void() -> Self {
+    pub const fn unit() -> Self {
         Self {
-            kind: ExpressionKind::Void,
-            associated_type: Some(AssociatedType::Concrete(Type::Void)),
+            kind: ExpressionKind::Unit,
+            associated_type: Some(AssociatedType::Concrete(Type::Unit)),
         }
     }
 
@@ -98,8 +102,20 @@ impl Expression {
     }
 
     pub const fn function_call(name: String, args: Vec<Self>) -> Self {
+        Self::namespaced_function_call(None, name, args)
+    }
+
+    pub const fn namespaced_function_call(
+        namespace: Option<String>,
+        name: String,
+        args: Vec<Self>,
+    ) -> Self {
         Self {
-            kind: ExpressionKind::FunctionCall(name, args),
+            kind: ExpressionKind::FunctionCall {
+                namespace,
+                name,
+                arguments: args,
+            },
             associated_type: None,
         }
     }
@@ -135,7 +151,7 @@ pub enum Literal {
 }
 
 impl Literal {
-    pub fn int(val: u128) -> Self {
+    pub const fn int(val: u128) -> Self {
         Self::Integer(val)
     }
 
@@ -165,12 +181,15 @@ pub enum BinaryOp {
 /// TODO: Add more operators
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOp {
+    /// Arithmetic negation: `-x`
     Negate,
+    /// Boolean negation: `!x`
+    Not,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
-    pub pattern: Expression,
+    pub pattern: Pattern,
     pub body: MatchBody,
 }
 
@@ -181,13 +200,7 @@ pub enum MatchBody {
 }
 
 impl MatchArm {
-    pub fn new(pattern: Expression, body: MatchBody) -> Self {
-        match pattern.kind {
-            ExpressionKind::Identifier(_)
-            | ExpressionKind::Literal(_)
-            | ExpressionKind::NewEnumInstance(_, _, _) => (),
-            _ => panic!(),
-        };
+    pub const fn new(pattern: Pattern, body: MatchBody) -> Self {
         Self { pattern, body }
     }
 }
