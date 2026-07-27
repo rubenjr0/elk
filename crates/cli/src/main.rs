@@ -18,7 +18,7 @@ fn main() -> Result<()> {
     println!("Compiling {path}...");
     let src = std::fs::read_to_string(&path)?;
 
-    let compiled = compile_to_object(&src);
+    let compiled = compile_to_object(&mut src.as_str());
 
     std::fs::write(&args.output_path, compiled)?;
     // std::process::Command::new("gcc")

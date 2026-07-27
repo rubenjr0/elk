@@ -2,7 +2,7 @@ use ast::{
     expressions::{AssociatedType, Expression},
     types::{CustomType, Type},
 };
-use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, Value, types};
+use cranelift::prelude::{FunctionBuilder, InstBuilder, Value, types};
 use cranelift_module::Module;
 
 use crate::{Codegen, Generable};
@@ -44,7 +44,9 @@ impl Codegen {
                 panic!("Type not inferred");
             }
             let v = self.gen_expression(expr, builder);
-            builder.ins().stack_store(v, ss, off as i32);
+            builder
+                .ins()
+                .stack_store(cranelift::prelude::types::I32, v, ss, off as i32);
         });
 
         let ty = self.module.target_config().pointer_type();
@@ -76,12 +78,9 @@ impl Codegen {
             .find(|(f, _)| f.name() == field_name)
             .unwrap();
         let ptr = builder.use_var(*var);
-        builder.ins().load(
-            field.ty().to_cranelift(),
-            MemFlags::new(),
-            ptr,
-            offset as i32,
-        )
+        builder
+            .ins()
+            .load(field.ty().to_cranelift(), todo!(), ptr, offset as i32)
     }
 
     pub fn gen_new_enum_instance(

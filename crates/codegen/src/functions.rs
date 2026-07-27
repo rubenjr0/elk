@@ -72,9 +72,13 @@ impl Codegen {
                 .iter()
                 .zip(sig.arguments())
                 .enumerate()
-                .for_each(|(i, (var_name, ty))| {
+                .for_each(|(i, (pattern, ty))| {
+                    // TODO: full pattern support in params; only simple bindings for now
+                    let ast::patterns::Pattern::Identifier(var_name) = pattern else {
+                        todo!("pattern parameter in codegen")
+                    };
                     let var = codegen.declare_variable(var_name, ty.to_owned());
-                    builder.declare_var(var, ty.to_cranelift());
+                    builder.declare_var(ty.to_cranelift());
                     let tmp = builder.block_params(entry_block)[i];
                     builder.def_var(var, tmp);
                 });

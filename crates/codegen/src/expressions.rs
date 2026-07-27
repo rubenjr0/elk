@@ -21,9 +21,9 @@ impl Codegen {
                 builder.use_var(*var)
             }
             ExpressionKind::BinaryOp(lhs, op, rhs) => self.gen_binary_op(lhs, rhs, op, builder),
-            ExpressionKind::FunctionCall(function_name, args) => {
-                self.gen_function_call(function_name, args, builder)
-            }
+            ExpressionKind::FunctionCall {
+                name, arguments, ..
+            } => self.gen_function_call(name, arguments, builder),
             ExpressionKind::Unit => builder.ins().iconst(types::I32, 0),
             ExpressionKind::NewRecordInstance(record_name, fields) => {
                 self.gen_new_record_instance(record_name, fields, builder)
@@ -63,7 +63,7 @@ impl Codegen {
 
 fn gen_literal(lit: &Literal, ty: &Type, builder: &mut FunctionBuilder) -> Value {
     match lit {
-        Literal::Integer(v) => builder.ins().iconst(ty.to_cranelift(), *v as i64),
+        Literal::Integer(v) => builder.ins().iconst(ty.to_cranelift(), *v as i64), // u128 → i64 narrowing at codegen; type checker ensures it fits
         Literal::Float(v) => match ty {
             Type::F32 => builder.ins().f32const(*v as f32),
             Type::F64 => builder.ins().f64const(*v),

@@ -1,30 +1,43 @@
-use ast::{statements::Block, top_level::TopLevel};
-use nom::{IResult, Parser, branch::alt, bytes::complete::tag, combinator::map, multi::many0};
-
-use crate::{
-    common::ws,
-    custom_types::parse_custom_type,
-    functions::{parse_function_definition, parse_function_impl},
-    statements::parse_block,
+use ast::top_level::TopLevel;
+use winnow::{
+    Parser, Result,
+    combinator::{alt, preceded, repeat},
+    error::StrContext,
 };
 
-pub fn parse_top_levels(input: &str) -> IResult<&str, Vec<TopLevel>> {
-    many0(parse_top_level).parse(input)
+use crate::{
+    custom_types::parse_custom_type_definition,
+    functions::{parse_function_definition, parse_function_impl},
+    keyword,
+    statements::parse_block,
+    ws,
+};
+
+pub fn parse_top_levels(input: &mut &str) -> Result<Vec<TopLevel>> {
+    repeat(
+        1..,
+        ws(parse_top_level).context(StrContext::Label("TopLevel")),
+    )
+    .context(StrContext::Label("TopLevels"))
+    .parse_next(input)
 }
 
-fn parse_top_level(input: &str) -> IResult<&str, TopLevel> {
+fn parse_top_level(input: &mut &str) -> Result<TopLevel> {
     alt((
-        map(parse_custom_type, TopLevel::CustomType),
-        map(parse_entrypoint, TopLevel::EntryPoint),
-        map(parse_function_definition, TopLevel::FunctionDefinition),
-        map(parse_function_impl, TopLevel::FunctionImplementation),
+        parse_custom_type_definition
+            .context(StrContext::Label("CustomType"))
+            .map(TopLevel::CustomType),
+        preceded(ws(keyword("main")), parse_block)
+            .context(StrContext::Label("EntryPoint"))
+            .map(TopLevel::EntryPoint),
+        parse_function_definition
+            .context(StrContext::Label("FunctionDef"))
+            .map(TopLevel::FunctionDefinition),
+        parse_function_impl
+            .context(StrContext::Label("FunctionImpl"))
+            .map(TopLevel::FunctionImplementation),
     ))
-    .parse(input)
-}
-
-fn parse_entrypoint(input: &str) -> IResult<&str, Block> {
-    let (input, _) = ws(tag("main")).parse(input)?;
-    parse_block(input)
+    .parse_next(input)
 }
 
 #[cfg(test)]
@@ -35,41 +48,48 @@ mod tests {
 
     #[test]
     fn test_parse_entrypoint() {
-        let input = "main { }";
-        let (_, parsed) = parse_top_level(input).unwrap();
+        let mut input = "main { }";
+        let parsed = parse_top_level(&mut input).unwrap();
         assert!(matches!(parsed, TopLevel::EntryPoint(_)));
     }
 
     #[test]
     fn test_parse_function_definition() {
-        let input = "my_func : U8 -> U8;";
-        let (_, parsed) = parse_top_level(input).unwrap();
+        let mut input = "func(MyType) -> U8;";
+        let parsed = parse_top_level(&mut input).unwrap();
         assert!(matches!(parsed, TopLevel::FunctionDefinition(_)));
     }
 
     #[test]
     fn test_parse_function_impl() {
-        let input = "my_func x = x;";
-        let (_, parsed) = parse_top_level(input).unwrap();
+        let mut input = "func(x) = 2;";
+        let parsed = parse_top_level(&mut input).unwrap();
         assert!(matches!(parsed, TopLevel::FunctionImplementation(_)));
     }
 
     #[test]
     fn test_parse_custom_type() {
-        let input = "type MyType { Var1, Var2 }";
-        let (_, parsed) = parse_top_level(input).unwrap();
+        let mut input = "type MyType { Var1, Var2 }";
+        let parsed = parse_top_level(&mut input).unwrap();
         assert!(matches!(parsed, TopLevel::CustomType(_)));
     }
 
     #[test]
     fn test_parse_top_levels() {
-        let input = "
-        type MyType {Var1,Var2}
+        let mut input = "
+        type MyType { Var1, Var2 }
+
+        func(MyType) -> U8;
+
+        func(x) = 2;
 
         main {}";
-        let (_, parsed) = parse_top_levels(input).unwrap();
-        assert_eq!(parsed.len(), 2);
+        let parsed = parse_top_levels(&mut input).unwrap();
+        assert!(input.is_empty(), "Did not parse all input: {input:?}");
+        assert_eq!(parsed.len(), 4);
         assert!(matches!(parsed[0], TopLevel::CustomType(_)));
-        assert!(matches!(parsed[1], TopLevel::EntryPoint(_)));
+        assert!(matches!(parsed[1], TopLevel::FunctionDefinition(_)));
+        assert!(matches!(parsed[2], TopLevel::FunctionImplementation(_)));
+        assert!(matches!(parsed[3], TopLevel::EntryPoint(_)));
     }
 }

@@ -1,0 +1,90 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT    = _{ "//" ~ (!NEWLINE ~ ANY)* }
+KEYWORD    = @{ "main" | "type" | "match" | "return" }
+
+// ==========================================
+// High-Level Program Structure
+// ==========================================
+
+Program    = _{ SOI ~ (FunctionDef | FunctionImpl | CustomTypeDef)* ~ Main? ~ EOI }
+Main       =  { "main" ~ "{" ~ Statement* ~ "}" }
+Statement  =  { (Assignment | Return) ~ ";" }
+Assignment =  { Identifier ~ "=" ~ Expr }
+Return     =  { "return" ~ Expr }
+
+// Types
+Type = { TypeIdentifier ~ TypeVariablesDef? | FunctionSignature | ("[" ~ Type ~ "]") }
+
+// Functions
+FunctionNamespace = @{ (TypeIdentifier ~ "::")? ~ Identifier }
+FunctionHeader    =  { FunctionNamespace ~ TypeVariablesDef? }
+FunctionSignature =  { "(" ~ FunctionDefParameterList ~ ")" ~ "->" ~ Type }
+
+FunctionDef  = { FunctionHeader ~ FunctionSignature ~ (FunctionBody | ";") }
+FunctionImpl = { FunctionHeader ~ "(" ~ FunctionImplParameterList ~ ")" ~ FunctionBody }
+FunctionCall = { FunctionHeader ~ "(" ~ FunctionCallParameterList ~ ")" }
+
+FunctionBody = { "=" ~ Expr ~ ";" }
+
+FunctionDefParameterList  = _{ FunctionDefParameter ~ ("," ~ FunctionDefParameter)* ~ ","? }
+FunctionImplParameterList = _{ FunctionParameter ~ ("," ~ FunctionParameter)* ~ ","? }
+FunctionCallParameterList = _{ Expr ~ ("," ~ Expr)* ~ ","? }
+
+FunctionDefParameter = { (Identifier ~ ":")? ~ Type }
+FunctionParameter    = { Identifier | Expr }
+
+// Custom types
+CustomTypeDef               = { "type" ~ TypeIdentifier ~ TypeVariablesDef? ~ "{" ~ (CustomTypeEnum | CustomTypeStruct) ~ "}" }
+CustomTypeStruct            = { CustomTypeStructField ~ ("," ~ CustomTypeStructField)* ~ ","? }
+CustomTypeStructField       = { Identifier ~ ":" ~ Type }
+CustomTypeEnum              = { CustomTypeEnumField ~ ("," ~ CustomTypeEnumField)* ~ ","? }
+CustomTypeEnumField         = { TypeIdentifier ~ CustomTypeEnumFieldContents? }
+CustomTypeEnumFieldContents = { "(" ~ TypeIdentifier ~ ("," ~ TypeIdentifier)* ~ ","? ~ ")" }
+TypeVariablesDef            = { "<" ~ TypeIdentifier ~ ("," ~ TypeIdentifier)* ~ ","? ~ ">" }
+
+// Identifiers
+Identifier     = @{ !KEYWORD ~ (("_" | ASCII_ALPHA_LOWER) ~ ("_" | ASCII_ALPHANUMERIC)*) | ("_"+) }
+TypeIdentifier = @{ ASCII_ALPHA_UPPER ~ ("_" | ASCII_ALPHANUMERIC)* }
+
+// ==========================================
+// Expressions
+// ==========================================
+Primary      = _{ Literal | FunctionCall | Identifier | "(" ~ Expr ~ ")" }
+Expr         =  { Logical | Literal | MatchBlock | StructAccess | Identifier | NewTypeInstance | Block }
+Literal      = @{ Boolean | Number | "Void" }
+Number       = @{ Float | Integer }
+Boolean      = @{ "True" | "False" }
+Integer      = @{ ASCII_DIGIT+ }
+Float        = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+StructAccess = @{ Identifier ~ "." ~ Identifier }
+Block        =  { "{" ~ Statement* ~ Expr ~ "}" }
+
+// Operations and operators
+Unary   = { UnaryOp ~ Unary | Primary }
+UnaryOp = { "-" | "!" }
+
+Exponential = { Unary ~ ("^" ~ Unary)* }
+
+Multiplicative = { Exponential ~ (MulOp ~ Exponential)* }
+MulOp          = { "*" | "/" | "%" }
+
+Additive = { Multiplicative ~ (AddOp ~ Multiplicative)* }
+AddOp    = { "+" | "-" }
+
+Comparison = { Additive ~ (CompOp ~ Additive)* }
+CompOp     = { "<" | ">" | "<=" | ">=" | "==" | "!=" }
+
+Logical   = { Comparison ~ (LogicalOp ~ Comparison)* }
+LogicalOp = { "&&" | "||" }
+
+NewTypeInstance         = { NewEnumInstance | NewStructInstance }
+NewEnumInstance         = { TypeIdentifier ~ "." ~ TypeIdentifier ~ NewEnumInstanceContents? }
+NewEnumInstanceContents = { "(" ~ Expr ~ ("," ~ Expr)* ~ ","? ~ ")" }
+NewStructInstance       = { TypeIdentifier ~ "{" ~ NewStructFields ~ "}" }
+NewStructFields         = { NewStructField ~ ("," ~ NewStructField)* ~ ","? }
+NewStructField          = { Identifier ~ ":" ~ Expr }
+
+// Match
+MatchBlock = { "match" ~ Expr ~ "{" ~ MatchArm ~ ("," ~ MatchArm)* ~ ","? ~ "}" }
+MatchArm   = { Pattern ~ "=>" ~ Expr }
+Pattern    = { "_" | Identifier | Literal | StructAccess | NewEnumInstance }

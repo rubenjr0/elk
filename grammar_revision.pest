@@ -1,0 +1,302 @@
+// ==========================================
+// Whitespace and Comments
+// ==========================================
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+// Added block comments.
+COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE?
+           | "/*" ~ (!"*/" ~ ANY)* ~ "*/"
+           }
+
+// ==========================================
+// Keywords
+// ==========================================
+
+// BUG (original): `KEYWORD = @{ "main" | ... }` matches prefixes — "match_fn"
+// would have "match" treated as a keyword. Fix: add a word-boundary check.
+// The `!` (negative lookahead) after the alternatives ensures the keyword
+// is not immediately followed by an alphanumeric or underscore character.
+KEYWORD = @{
+    ("main" | "type" | "match" | "return" | "import" | "do")
+    ~ !(ASCII_ALPHANUMERIC | "_")
+}
+
+// ==========================================
+// Program Structure
+// ==========================================
+
+Program      = _{ SOI ~ Import* ~ TopLevelItem* ~ Main? ~ EOI }
+TopLevelItem = _{ FunctionDef | FunctionImpl | CustomTypeDef }
+
+Import      =  { "import" ~ ModulePath ~ ImportItems? ~ ";" }
+// Paths like `utils`, `std/io`, `my/nested/mod`
+ModulePath  = @{ Identifier ~ ("/" ~ Identifier)* }
+ImportItems = _{ "(" ~ ImportItem ~ ("," ~ ImportItem)* ~ ","? ~ ")" }
+ImportItem  = _{ TypeIdentifier | Identifier }
+
+// NOTE: `main` now uses Block for consistency — the last expression is the
+// return value (Void if the block ends with a statement).
+Main = { "main" ~ Block }
+
+// NOTE: Return before Assignment in the ordered choice so that "return"
+// is not greedily parsed as an Identifier.
+Statement  =  { (Return | Assignment) ~ ";" }
+Return     =  { "return" ~ Expr }
+Assignment =  { Identifier ~ "=" ~ Expr }
+
+// ==========================================
+// Types
+// ==========================================
+
+// Order matters:
+//   FunctionType before UnitType: `() -> T` must not be consumed as `()` then fail on `->`.
+//   UnitType before TupleType: `()` has no inner elements, TupleType requires 2+.
+Type = { FunctionType | UnitType | TupleType | ListType | TypeRef }
+
+// The unit type — an empty tuple. Both type and value are `()`.
+UnitType = { "(" ~ ")" }
+
+// Named type with optional generic args: `U8`, `Option<T>`, `Result<T, E>`
+TypeRef  = { TypeIdentifier ~ TypeArgs? }
+TypeArgs = { "<" ~ Type ~ ("," ~ Type)* ~ ","? ~ ">" }
+
+// Tuple type requires at least 2 elements to distinguish from a parenthesised type.
+TupleType = { "(" ~ Type ~ ("," ~ Type)+ ~ ")" }
+
+// List type: `[U8]`, `[Option<String>]`
+ListType = { "[" ~ Type ~ "]" }
+
+// Function type: `() -> ()`, `(U8, String) -> Bool`, `(name: String) -> Bool`
+FunctionType       = { "(" ~ FunctionTypeParams? ~ ")" ~ "->" ~ Type }
+FunctionTypeParams = _{ FunctionTypeParam ~ ("," ~ FunctionTypeParam)* ~ ","? }
+// Labels are optional — useful for documentation, not enforced at call site.
+FunctionTypeParam  =  { (Identifier ~ ":")? ~ Type }
+
+// Generic type variable definitions: `<T>`, `<T, E>`, `<S: State>`
+TypeVariablesDef = { "<" ~ TypeVar ~ ("," ~ TypeVar)* ~ ","? ~ ">" }
+TypeVar          = { TypeIdentifier ~ (":" ~ TypeIdentifier)? }
+
+// ==========================================
+// Functions
+// ==========================================
+
+FunctionNamespace = @{ (TypeIdentifier ~ "::")? ~ Identifier }
+FunctionHeader    =  { FunctionNamespace ~ TypeVariablesDef? }
+
+// Declaration (optionally with inline body):
+//   `sum(a: U8, b: U8) -> U8;`
+//   `sum(a: U8, b: U8) -> U8 = a + b;`
+// NOTE: The `?` on FunctionDefParams supports zero-argument functions.
+FunctionDef  = { FunctionHeader ~ "(" ~ FunctionDefParams? ~ ")" ~ "->" ~ Type ~ ("=" ~ Expr)? ~ ";" }
+
+// Pattern-matched implementation:
+//   `sum(a, b) = a + b;`
+//   `is_origin((0, 0)) = True;`
+FunctionImpl = { FunctionHeader ~ "(" ~ PatternList? ~ ")" ~ "=" ~ Expr ~ ";" }
+
+// Call: `sum(1, 2)`, `Option::map(opt, f)`
+FunctionCall = { FunctionNamespace ~ TypeVariablesDef? ~ "(" ~ CallArgs? ~ ")" }
+
+FunctionDefParams = _{ FunctionDefParam ~ ("," ~ FunctionDefParam)* ~ ","? }
+// Labels are optional in declarations too.
+FunctionDefParam  =  { (Identifier ~ ":")? ~ Type }
+
+CallArgs = _{ Expr ~ ("," ~ Expr)* ~ ","? }
+
+// ==========================================
+// Patterns
+// ==========================================
+
+// NOTE (original): `FunctionParameter = { Identifier | Expr }` was too broad —
+// allowing arbitrary expressions as patterns. Patterns are a restricted subset.
+
+PatternList = _{ Pattern ~ ("," ~ Pattern)* ~ ","? }
+
+Pattern
+    = { WildcardPat  // must be tried before Identifier (both can be "_")
+      | EnumPat      // `Option.Some(x)`, `Status.Ready`
+      | StructPat    // `Client { name, age }`
+      | TuplePat     // `(a, b, c)`
+      | Literal      // `0`, `True`, `"hello"`
+      | Identifier   // binding
+      }
+
+// `_` alone — negative lookahead ensures `_x` falls through to Identifier.
+WildcardPat = { "_" ~ !(ASCII_ALPHANUMERIC | "_") }
+// Enum destructuring with optional payload: `Option.Some(x)` or `Status.Ready`
+EnumPat     = { TypeIdentifier ~ "." ~ TypeIdentifier ~ ("(" ~ PatternList ~ ")")? }
+// Struct destructuring; `..` rest-ignore is a useful extension to add later.
+StructPat   = { TypeIdentifier ~ "{" ~ FieldPat ~ ("," ~ FieldPat)* ~ ","? ~ "}" }
+// Named field, optionally with a sub-pattern: `age` or `age: 18`
+FieldPat    = { Identifier ~ (":" ~ Pattern)? }
+// Tuple pattern: at least 2 elements.
+TuplePat    = { "(" ~ Pattern ~ ("," ~ Pattern)+ ~ ")" }
+
+// ==========================================
+// Custom Types
+// ==========================================
+
+// Two forms mirror function declarations:
+//   Marker:    `type Inactive;`             — no data, ends with ";" (like a declaration with no body)
+//   With body: `type Option<T> { ... }`     — braces, no trailing ";"
+// `{}` is intentionally not valid for markers — it would be indistinguishable from an empty struct.
+CustomTypeDef = { "type" ~ TypeIdentifier ~ TypeVariablesDef? ~ (TypeBody | ";") }
+
+// Silent rule: the node in the AST will be StructBody or EnumBody directly.
+TypeBody  = _{ StructBody | EnumBody }
+
+StructBody  = { "{" ~ StructField ~ ("," ~ StructField)* ~ ","? ~ "}" }
+StructField = { Identifier ~ ":" ~ Type }
+
+EnumBody    = { "{" ~ EnumVariant ~ ("," ~ EnumVariant)* ~ ","? ~ "}" }
+EnumVariant = { TypeIdentifier ~ EnumVariantPayload? }
+// Variants can hold positional tuple data OR an inline struct.
+EnumVariantPayload = { "(" ~ Type ~ ("," ~ Type)* ~ ","? ~ ")"
+                     | StructBody
+                     }
+
+// ==========================================
+// Identifiers
+// ==========================================
+
+// NOTE: Identifiers start lowercase or with `_`. `__` etc. are valid (useful
+// for generated names). `_` alone is reserved for wildcard patterns.
+// Identifiers start with a lowercase letter, or with `_` followed by at least
+// one more character (`_x`, `_my_val`, `__gen` are all valid; `_` alone is the
+// wildcard and handled separately in Pattern).
+Identifier     = @{ !KEYWORD ~ (ASCII_ALPHA_LOWER ~ (ASCII_ALPHANUMERIC | "_")* | "_" ~ (ASCII_ALPHANUMERIC | "_")+) }
+// TypeIdentifiers may optionally start with a single `_` before the required
+// uppercase letter, matching the winnow parser behaviour (`_MyType` is valid).
+TypeIdentifier = @{ "_"? ~ ASCII_ALPHA_UPPER ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// ==========================================
+// Expressions
+// ==========================================
+
+// Pipe is the outermost (lowest-precedence) expression form.
+// `|>` is left-associative forward pipe.
+// `<|` is right-associative backward pipe / composition.
+Expr       = { Pipe }
+Pipe       =  { Logical ~ (PipeOp ~ PipeTarget)* }
+PipeOp     =  { "|>" | "<|" }
+// A pipe target is either a partial call `f(arg)` or a bare function name `f`.
+// FunctionCall must come first — both start with an identifier.
+PipeTarget = _{ FunctionCall | FunctionNamespace }
+
+Logical      =  { Comparison ~ (LogicalOp ~ Comparison)* }
+LogicalOp    =  { "&&" | "||" }
+
+Comparison   =  { Additive ~ (CompOp ~ Additive)* }
+// BUG (original): `CompOp = { "<" | ">" | ... }` — single-char operators match
+// before their two-char counterparts ("<=", ">="). Always put longer tokens first.
+CompOp       =  { "<=" | ">=" | "==" | "!=" | "<" | ">" }
+
+Additive     =  { Multiplicative ~ (AddOp ~ Multiplicative)* }
+AddOp        =  { "+" | "-" }
+
+Multiplicative =  { Exponential ~ (MulOp ~ Exponential)* }
+MulOp          =  { "*" | "/" | "%" }
+
+Exponential  =  { Unary ~ ("^" ~ Unary)* }
+
+Unary        =  { UnaryOp ~ Unary | Postfix }
+UnaryOp      =  { "-" | "!" }
+
+// NOTE (original): `StructAccess = @{ Identifier ~ "." ~ Identifier }` was
+// atomic and only supported one level of access (`a.b`). `a.b.c` would fail.
+// Fix: make it a postfix chain on any primary expression.
+Postfix = { Primary ~ ("." ~ Identifier)* }
+
+// NOTE (original): `Expr = { Logical | Literal | MatchBlock | ... }` listed
+// `Literal` and `Identifier` as top-level alternatives, but `Logical` already
+// chains down to both through the precedence hierarchy. Those were dead
+// alternatives (unreachable in PEG ordered choice after `Logical` matches).
+//
+// In `Primary`, order matters: try more specific/longer alternatives first.
+Primary
+    = _{ Literal
+       | MatchBlock
+       | Block
+       | Lambda         // `(x) -> x + 1`, `(x, y) -> x + y` — before UnitLit/TupleLit since `->` disambiguates
+       | UnitLit        // `()` — before TupleLit and `(Expr)` since it has no inner content
+       | TupleLit       // `(1, 2)` — before parenthesised Expr
+       | ListLit        // `[1, 2, 3]`
+       | FunctionCall   // before bare Identifier: try `foo(` first
+       | NewEnumInstance    // `Option.Some(x)` — starts with TypeIdentifier
+       | NewStructInstance  // `Client { ... }` — starts with TypeIdentifier
+       | Identifier
+       | "(" ~ Expr ~ ")"
+       }
+
+// ==========================================
+// Literals
+// ==========================================
+
+// NOTE (original): Strings were entirely missing from Literal.
+// NOTE (original): Float must come before Integer so that `1.5` doesn't
+// parse as Integer `1` followed by `.5`.
+Literal   = { Boolean | Number | StringLit }
+Boolean   = @{ "True" | "False" }
+// Order matters in PEG: Float before Integer (so `1.5` isn't consumed as `1`),
+// and prefixed forms before plain Integer (so `0x1f` isn't consumed as `0`).
+Number  = @{ Float | HexInt | BinInt | OctInt | Integer }
+Float   = @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+HexInt  = @{ "-"? ~ "0" ~ ("x" | "X") ~ ASCII_HEX_DIGIT+ }
+BinInt  = @{ "-"? ~ "0" ~ ("b" | "B") ~ ('0'..'1')+ }
+OctInt  = @{ "-"? ~ "0" ~ ("o" | "O") ~ ('0'..'7')+ }
+Integer = @{ "-"? ~ ASCII_DIGIT+ }
+
+// Basic string with escape sequences. No interpolation yet.
+StringLit  = @{ "\"" ~ StringChar* ~ "\"" }
+StringChar = @{ "\\" ~ ANY | !("\"" | "\\") ~ ANY }
+
+// NOTE (original): Tuple and list *literals* were missing (only types existed).
+// Tuple literal requires 2+ elements to distinguish from `(expr)`.
+UnitLit  = { "(" ~ ")" }
+TupleLit = { "(" ~ Expr ~ ("," ~ Expr)+ ~ ")" }
+// List literal can be empty.
+ListLit  = { "[" ~ (Expr ~ ("," ~ Expr)* ~ ","?)? ~ "]" }
+
+// ==========================================
+// Blocks
+// ==========================================
+
+// A block optionally ends with a bare expression (the return value).
+// If absent, the block implicitly returns `()` — useful for `main` and other
+// unit-returning functions: `main { x = foo(); bar(x); }`
+// With a final expression: `{ x = 1; x + 1 }` returns `x + 1`.
+Block = { "{" ~ Statement* ~ Expr? ~ "}" }
+
+// ==========================================
+// Lambda / Anonymous Functions
+// ==========================================
+
+// Always-parens form: `(x) -> x + 1`, `(x, y) -> x + y`, `() -> 42`.
+// Mirrors function type notation — `(U8) -> Bool` is the type,
+// `(x) -> x > 0` is the value. No special case for single args.
+// Unambiguous: `->` is not a binary operator in expressions, so the parser
+// can commit to Lambda as soon as it sees `) ->` after a param list.
+// Lambda must be tried before `TupleLit` and `"(" ~ Expr ~ ")"` in Primary
+// since all three start with `(`.
+Lambda       = { "(" ~ LambdaParams? ~ ")" ~ "->" ~ Expr }
+LambdaParams = _{ Identifier ~ ("," ~ Identifier)* ~ ","? }
+
+// ==========================================
+// Match
+// ==========================================
+
+MatchBlock = { "match" ~ Expr ~ "{" ~ MatchArm ~ ("," ~ MatchArm)* ~ ","? ~ "}" }
+MatchArm   = { Pattern ~ "=>" ~ Expr }
+
+// ==========================================
+// Type Instantiation
+// ==========================================
+
+// Enum variant: `Option.Some(42)` or `Status.Ready`
+NewEnumInstance   =  { TypeIdentifier ~ "." ~ TypeIdentifier ~ EnumArgs? }
+EnumArgs          =  { "(" ~ Expr ~ ("," ~ Expr)* ~ ","? ~ ")" }
+
+// Struct literal: `Client { name: "Alice", age: 30 }`
+NewStructInstance =  { TypeIdentifier ~ "{" ~ StructFieldInit ~ ("," ~ StructFieldInit)* ~ ","? ~ "}" }
+StructFieldInit   =  { Identifier ~ ":" ~ Expr }

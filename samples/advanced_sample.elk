@@ -1,28 +1,27 @@
-type Option(T) {
-    Some(T)
-    , None
+type Option<T> {
+    Some(T),
+    None
 }
 
 type Flavor {
-    Orange
-    , Apple
+    Orange,
+    Apple
 }
 
-type Person { 
-    name: String
-    , age: U8
-    , favorite_flavor: Option(Flavor)
+type Person {
+    name: String,
+    age: U8,
+    favorite_flavor: Option<Flavor>
 }
 
-does_like : Person -> Flavor -> Bool;
-does_like person flavor {
-    match person.favorite_flavor {
-        Option.Some(f) -> flavor == f,
-        Option.None -> True
-    }
-}
+does_like(person: Person, flavor: Flavor) -> Bool;
+does_like(person, flavor) = match person.favorite_flavor {
+    Option.Some(f) => flavor == f,
+    Option.None => True
+};
 
 main {
-    alice = Person { name = "Alice", favorite_flavor = Option.Some(Flavor.Orange) };
-    does_alice_like_orange = does_like alice Flavor.Orange;
+    alice = Person { name: "Alice", age: 30, favorite_flavor: Option.Some(Flavor.Orange) };
+    does_alice_like_orange = does_like(alice, Flavor.Orange);
+    does_alice_like_orange
 }

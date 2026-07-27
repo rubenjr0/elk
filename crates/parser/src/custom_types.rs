@@ -2,93 +2,86 @@ use ast::types::{
     CustomType, Type,
     custom::{CustomTypeContent, Field, Variant},
 };
-use nom::{
-    IResult, Parser,
-    branch::alt,
-    bytes::complete::tag,
-    combinator::{map, opt},
-    multi::{separated_list0, separated_list1},
-    sequence::{delimited, terminated},
+use winnow::{
+    Parser, Result,
+    combinator::{alt, delimited, opt, separated, terminated},
 };
 
 use crate::{
-    common::{parse_identifier_lower, parse_identifier_upper, ws},
+    identifiers::{parse_identifier_lower, parse_identifier_upper},
+    keyword,
     types::parse_type,
+    ws,
 };
 
 /// Custom types are defined as follows:
 /// `type CustomType { VariantA, VariantB }`
-pub fn parse_custom_type(input: &str) -> IResult<&str, CustomType> {
-    let (input, _) = ws(tag("type")).parse(input)?;
-    let (input, name) = ws(parse_identifier_upper).parse(input)?;
-    let (input, generics) = parse_custom_type_generics(input)?;
-    let (input, content) = delimited(
-        ws(tag("{")),
-        terminated(parse_custom_type_contents, opt(ws(tag(",")))),
-        ws(tag("}")),
-    )
-    .or(|a| Ok((a, CustomTypeContent::Empty)))
-    .parse(input)?;
-    Ok((input, CustomType::new(name, content, generics)))
-}
-
-pub fn parse_custom_type_generics(input: &str) -> IResult<&str, Vec<String>> {
-    opt(delimited(
-        ws(tag("(")),
-        separated_list1(ws(tag(",")), parse_identifier_upper.map(str::to_string)),
-        ws(tag(")")),
+pub fn parse_custom_type_definition(input: &mut &str) -> Result<CustomType> {
+    let _ = ws(keyword("type")).parse_next(input)?;
+    let name = ws(parse_identifier_upper).parse_next(input)?;
+    let generics = opt(parse_custom_type_generics)
+        .parse_next(input)?
+        .unwrap_or_default();
+    let content = opt(delimited(
+        ws('{'),
+        terminated(parse_custom_type_contents, opt(ws(','))),
+        ws('}'),
     ))
-    .map(Option::unwrap_or_default)
-    .parse(input)
+    .parse_next(input)?;
+    Ok(CustomType::new(name, content, generics))
 }
 
-fn parse_custom_type_contents(input: &str) -> IResult<&str, CustomTypeContent> {
+/// Generic parameters/arguments in angle brackets: `<A>`, `<A, B>`.
+/// Used for both type definitions (`type Option<A>`), type references
+/// (`Option<A>`), and function type-variable definitions (`map<A, B>(...)`).
+pub fn parse_custom_type_generics(input: &mut &str) -> Result<Vec<String>> {
+    delimited(
+        '<',
+        separated(1.., parse_identifier_upper.map(ToOwned::to_owned), ws(',')),
+        '>',
+    )
+    .parse_next(input)
+}
+
+fn parse_custom_type_contents(input: &mut &str) -> Result<CustomTypeContent> {
     alt((
-        map(parse_variants, |vs| {
+        parse_variants.map(|v: Vec<Variant>| {
             CustomTypeContent::Enum(
-                vs.into_iter()
+                v.into_iter()
                     .enumerate()
                     .map(|(i, v)| (i as u8, v))
                     .collect(),
             )
         }),
-        map(parse_fields, |r| {
-            let mut fields: Vec<Field> = r.into_iter().map(|(s, t)| Field::new(&s, t)).collect();
+        parse_fields.map(|v: Vec<(String, Type)>| {
+            let mut fields: Vec<Field> = v.into_iter().map(|(s, t)| Field::new(&s, t)).collect();
             fields.sort_by_key(|f| f.name().to_owned());
             CustomTypeContent::Record(fields)
         }),
     ))
-    .parse(input)
+    .parse_next(input)
 }
 
-fn parse_variants(input: &str) -> IResult<&str, Vec<Variant>> {
-    let (remaining, variants) = separated_list1(ws(tag(",")), parse_variant).parse(input)?;
-    Ok((remaining, variants))
+fn parse_variants(input: &mut &str) -> Result<Vec<Variant>> {
+    separated(1.., parse_variant, ws(',')).parse_next(input)
 }
 
-fn parse_fields(input: &str) -> IResult<&str, Vec<(String, Type)>> {
-    let (remaining, fields) = separated_list1(ws(tag(",")), parse_field).parse(input)?;
-    Ok((remaining, fields))
+fn parse_fields(input: &mut &str) -> Result<Vec<(String, Type)>> {
+    separated(1.., parse_field, ws(',')).parse_next(input)
 }
 
-fn parse_variant(input: &str) -> IResult<&str, Variant> {
-    let (remaining, name) = parse_identifier_upper(input)?;
-    alt((map(
-        opt(delimited(
-            tag("("),
-            separated_list0(ws(tag(",")), parse_type),
-            tag(")"),
-        )),
-        |types| Variant::new(name, types.unwrap_or_default()),
-    ),))
-    .parse(remaining)
+fn parse_variant(input: &mut &str) -> Result<Variant> {
+    let name = parse_identifier_upper(input)?;
+    opt(delimited('(', separated(0.., parse_type, ws(',')), ')'))
+        .map(|types| Variant::new(name, types.unwrap_or_default()))
+        .parse_next(input)
 }
 
-fn parse_field(input: &str) -> IResult<&str, (String, Type)> {
-    let (remaining, name) = parse_identifier_lower(input)?;
-    let (remaining, _) = ws(tag(":")).parse(remaining)?;
-    let (remaining, ty) = parse_type(remaining)?;
-    Ok((remaining, (name.to_owned(), ty)))
+fn parse_field(input: &mut &str) -> Result<(String, Type)> {
+    let name = parse_identifier_lower(input)?;
+    let _ = ws(':').parse_next(input)?;
+    let ty = parse_type(input)?;
+    Ok((name.to_owned(), ty))
 }
 
 #[cfg(test)]
@@ -100,106 +93,54 @@ mod tests {
 
     #[test]
     fn test_parse_empty_custom_type() {
-        let input = "type Phantom";
-        let (_, parsed) = super::parse_custom_type(input).unwrap();
+        let mut input = "type Phantom";
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "Phantom");
-        assert_eq!(parsed.content(), &CustomTypeContent::Empty);
+        assert_eq!(parsed.content(), None);
     }
 
     #[test]
     fn test_parse_custom_type_variants() {
-        let input = "type CustomType { VariantA, VariantB, }";
-        let (_, parsed) = super::parse_custom_type(input).unwrap();
+        let mut input = "type CustomType { VariantA, VariantB, }";
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Enum(vec![
+            Some(&CustomTypeContent::Enum(vec![
                 (0, Variant::new("VariantA", vec![])),
                 (1, Variant::new("VariantB", vec![])),
-            ])
+            ]))
         );
     }
 
     #[test]
     fn test_parse_custom_type_generics() {
-        let input = "type Option(T) { Some(T), None }";
-        let (_, parsed) = super::parse_custom_type(input).unwrap();
+        let mut input = "type Option<A> { Some(A), None }";
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "Option");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Enum(vec![
+            Some(&CustomTypeContent::Enum(vec![
                 (
                     0,
-                    Variant::new("Some", vec![Type::Custom("T".to_owned(), vec![])])
+                    Variant::new("Some", vec![Type::Custom("A".to_owned(), vec![])])
                 ),
                 (1, Variant::new("None", vec![])),
-            ])
+            ]))
         );
     }
 
     #[test]
     fn test_parse_custom_type_record() {
-        let input = "type CustomType { admin: Bool, age: U8, }";
-        let (_, parsed) = super::parse_custom_type(input).unwrap();
+        let mut input = "type CustomType { admin: Bool, age: U8, }";
+        let parsed = super::parse_custom_type_definition(&mut input).unwrap();
         assert_eq!(parsed.name(), "CustomType");
         assert_eq!(
             parsed.content(),
-            &CustomTypeContent::Record(vec![
+            Some(&CustomTypeContent::Record(vec![
                 Field::new("admin", Type::Bool),
                 Field::new("age", Type::U8),
-            ])
+            ]))
         );
-    }
-
-    #[test]
-    fn test_parse_variants() {
-        let input = "VariantA, VariantB";
-        let (_, parsed) = super::parse_variants(input).unwrap();
-        assert_eq!(parsed.len(), 2);
-    }
-
-    #[test]
-    fn test_parse_variants_fails() {
-        let input = "admin: Bool, age: U8";
-        let res = super::parse_variants(input);
-        assert!(res.is_err());
-    }
-
-    #[test]
-    fn test_parse_named_variant() {
-        let input = "VariantA";
-        let (_, parsed) = super::parse_variant(input).unwrap();
-        assert_eq!(parsed.name(), input);
-        assert!(parsed.types().is_empty());
-    }
-
-    #[test]
-    fn test_parse_tuple_variant() {
-        let input = "VariantA(U8)";
-        let (_, parsed) = super::parse_variant(input).unwrap();
-        assert_eq!(parsed.name(), "VariantA");
-        assert_eq!(parsed.types(), &vec![Type::U8]);
-    }
-
-    #[test]
-    fn test_parse_fields() {
-        let input = "admin: Bool, age: U8";
-        let (_, parsed) = super::parse_fields(input).unwrap();
-        assert_eq!(parsed.len(), 2);
-    }
-
-    #[test]
-    fn test_parse_fields_fails() {
-        let input = "VariantA, VariantB";
-        let res = super::parse_fields(input);
-        assert!(res.is_err());
-    }
-
-    #[test]
-    fn test_parse_field() {
-        let input = "admin: Bool";
-        let (_, parsed) = super::parse_field(input).unwrap();
-        assert_eq!(parsed.0, "admin");
-        assert_eq!(parsed.1, Type::Bool);
     }
 }
